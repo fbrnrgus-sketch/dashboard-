@@ -206,14 +206,6 @@
     <div class="list" id="autos"></div>
   </section>
 
-  <section>
-    <div class="sec-head">
-      <h2>🙋 사용자 확인 대기</h2>
-      <span class="count" id="waitCount">-</span>
-    </div>
-    <div class="list" id="waits"></div>
-  </section>
-
   <footer>
     <div><b>개인정보 안내</b> · <span id="privacy"></span></div>
     <div style="margin-top:6px">데이터 갱신 <span id="generated2">-</span> · 나이스(피클) 실행 기록 기준</div>
@@ -335,18 +327,6 @@ function renderStatics(){
     autos.appendChild(el);
   });
   document.getElementById("autoCount").textContent = `${DATA.automations.length}건`;
-
-  const waits = document.getElementById("waits");
-  waits.innerHTML = "";
-  DATA.waiting.forEach(w=>{
-    const el = document.createElement("article");
-    el.className = "wait-item";
-    el.innerHTML = `
-      <div class="t"><span>${esc(w.title)}</span><span class="since">${esc(w.since)}~</span></div>
-      <div class="d">${esc(w.detail)}</div>`;
-    waits.appendChild(el);
-  });
-  document.getElementById("waitCount").textContent = `${DATA.waiting.length}건`;
 
   const gen = fmtTime(DATA.generated_at);
   document.getElementById("generated").textContent = gen;
