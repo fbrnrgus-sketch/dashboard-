@@ -694,8 +694,8 @@
       style:{
         version:8,
         sources:{
-          sat:{type:"raster", tiles:[SAT], tileSize:256, maxzoom:19, attribution:"Esri · Maxar · Earthstar Geographics"},
-          topo:{type:"raster", tiles:[OSM], tileSize:256, maxzoom:19, attribution:"© OpenStreetMap contributors"}
+          sat:{type:"raster", tiles:[SAT], tileSize:256, maxzoom:19, attribution:"Esri, Maxar"},
+          topo:{type:"raster", tiles:[OSM], tileSize:256, maxzoom:19, attribution:"© OpenStreetMap"}
         },
         layers:[
           {id:"sat", type:"raster", source:"sat", paint:{"raster-saturation":-0.12,"raster-brightness-min":0.03,"raster-contrast":0.06}},
@@ -716,8 +716,8 @@
     return;
   }
 
-  map.addControl(new maplibregl.NavigationControl({visualizePitch:true}), "bottom-right");
   map.addControl(new maplibregl.AttributionControl({compact:true}), "bottom-right");
+  window.__jj = {map:map, go:function(i,o){return go(i,o);}, P:P, legs:legs};
 
   map.on("error", function(ev){
     if(ev && ev.error && /Failed to fetch|NetworkError/i.test(String(ev.error.message))){
@@ -747,7 +747,7 @@
       encoding:"terrarium",
       tileSize:256,
       maxzoom:13,
-      attribution:"DEM: AWS Terrain Tiles (SRTM)"
+      attribution:"DEM AWS Terrarium"
     });
     map.setTerrain({source:"dem", exaggeration:1.8});
 
@@ -1010,15 +1010,32 @@
     const Y = e => pad.t + ih - ((e-minE)/(maxE-minE))*ih;
     const baseY = pad.t + ih;
 
+    // 모노톤 Catmull-Rom 보간 — 구간 내 값을 벗어나지 않는 부드러운 곡선
+    const yv = P.map(p=>p.elevation_m);
+    const SAMP = 12;
+    const samples = [];
+    for(let i=0;i<N-1;i++){
+      const y0 = yv[Math.max(0,i-1)], y1 = yv[i], y2 = yv[i+1], y3 = yv[Math.min(N-1,i+2)];
+      const lo = Math.min(y1,y2), hi = Math.max(y1,y2);
+      for(let s=0;s<SAMP;s++){
+        const t = s/SAMP, t2 = t*t, t3 = t2*t;
+        let y = 0.5*((2*y1) + (-y0+y2)*t + (2*y0-5*y1+4*y2-y3)*t2 + (-y0+3*y1-3*y2+y3)*t3);
+        y = Math.min(hi, Math.max(lo, y));
+        samples.push({f:i+t, y:y});
+      }
+    }
+    samples.push({f:N-1, y:yv[N-1]});
+    const SX = f => pad.l + (f/(N-1))*iw;
+
     let line = "";
-    P.forEach((p,i)=>{ line += (i?"L":"M") + X(i).toFixed(1) + " " + Y(p.elevation_m).toFixed(1) + " "; });
-    let area = "M"+X(0).toFixed(1)+" "+baseY.toFixed(1)+" ";
-    P.forEach((p,i)=>{ area += "L"+X(i).toFixed(1)+" "+Y(p.elevation_m).toFixed(1)+" "; });
-    area += "L"+X(N-1).toFixed(1)+" "+baseY.toFixed(1)+" Z";
+    samples.forEach((s,k)=>{ line += (k?"L":"M") + SX(s.f).toFixed(1) + " " + Y(s.y).toFixed(1) + " "; });
+    let area = "M"+SX(0).toFixed(1)+" "+baseY.toFixed(1)+" ";
+    samples.forEach(s=>{ area += "L"+SX(s.f).toFixed(1)+" "+Y(s.y).toFixed(1)+" "; });
+    area += "L"+SX(N-1).toFixed(1)+" "+baseY.toFixed(1)+" Z";
 
     // 현재 지점까지 채운 영역
-    let doneArea = "M"+X(0).toFixed(1)+" "+baseY.toFixed(1)+" ";
-    for(let i=0;i<=cur;i++) doneArea += "L"+X(i).toFixed(1)+" "+Y(P[i].elevation_m).toFixed(1)+" ";
+    let doneArea = "M"+SX(0).toFixed(1)+" "+baseY.toFixed(1)+" ";
+    samples.forEach(s=>{ if(s.f <= cur+0.0001) doneArea += "L"+SX(s.f).toFixed(1)+" "+Y(s.y).toFixed(1)+" "; });
     doneArea += "L"+X(cur).toFixed(1)+" "+baseY.toFixed(1)+" Z";
 
     const y0 = Y(0);
