@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#1b2a4a" />
+<meta name="robots" content="noindex, nofollow" />
+<title>일일 실행 대시보드</title>
+<style>
+  :root{
+    --bg:#eef1f6;
+    --card:#ffffff;
+    --ink:#16233a;
+    --ink-soft:#5b6b85;
+    --ink-faint:#8c99ad;
+    --line:#e3e8f0;
+    --brand:#2f5bd7;
+    --brand-soft:#e8eefc;
+    --done:#12805c;
+    --done-bg:#e3f5ee;
+    --prog:#1f5fd0;
+    --prog-bg:#e4edfd;
+    --wait:#9a6a00;
+    --wait-bg:#fdf1d8;
+    --hold:#6b7280;
+    --hold-bg:#eceff4;
+    --radius:16px;
+    --shadow:0 1px 2px rgba(22,35,58,.05), 0 8px 24px rgba(22,35,58,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","맑은 고딕",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+    padding-bottom:28px;
+  }
+  .wrap{max-width:760px;margin:0 auto}
+
+  /* header */
+  header.top{
+    background:linear-gradient(160deg,#1b2a4a 0%,#2f4f8f 62%,#3a68c4 100%);
+    color:#fff;
+    padding:calc(18px + env(safe-area-inset-top)) 16px 16px;
+    border-radius:0 0 22px 22px;
+  }
+  .top-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .brand{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#b9c9ee;font-weight:600}
+  h1{font-size:21px;margin:6px 0 4px;letter-spacing:-.4px}
+  .sub{font-size:13px;color:#c9d6f2}
+  .live{
+    display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;
+    background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);
+    padding:5px 10px;border-radius:999px;white-space:nowrap
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:#6ee7b7;box-shadow:0 0 0 3px rgba(110,231,183,.22)}
+
+  /* date tabs */
+  .datetabs{
+    display:flex;gap:8px;overflow-x:auto;padding:14px 16px 4px;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  }
+  .datetabs::-webkit-scrollbar{display:none}
+  .tab{
+    flex:0 0 auto;appearance:none;border:1px solid var(--line);background:var(--card);
+    color:var(--ink-soft);font:inherit;font-size:13.5px;font-weight:600;
+    padding:9px 14px;border-radius:12px;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:1px;min-width:74px;
+    box-shadow:0 1px 2px rgba(22,35,58,.04);
+    transition:background .15s,color .15s,border-color .15s,transform .15s;
+  }
+  .tab .d{font-size:14px}
+  .tab .w{font-size:11px;color:var(--ink-faint);font-weight:500}
+  .tab[aria-selected="true"]{
+    background:var(--brand);border-color:var(--brand);color:#fff;
+    box-shadow:0 6px 16px rgba(47,91,215,.28);
+  }
+  .tab[aria-selected="true"] .w{color:#d3dff9}
+  .tab:active{transform:scale(.97)}
+
+  /* summary */
+  .summary{margin:12px 16px 0;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+  .dayline{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .dayline .d{font-size:17px;font-weight:700;letter-spacing:-.3px}
+  .dayline .hl{font-size:12.5px;color:var(--ink-soft)}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+  .stat{background:#f7f9fd;border-radius:12px;padding:10px 6px;text-align:center}
+  .stat .n{font-size:19px;font-weight:700;letter-spacing:-.5px;line-height:1.2}
+  .stat .k{font-size:11px;color:var(--ink-faint);margin-top:2px;font-weight:600}
+  .stat.done .n{color:var(--done)}
+  .stat.prog .n{color:var(--prog)}
+  .stat.wait .n{color:var(--wait)}
+  .bar-row{display:flex;align-items:center;gap:10px;margin-top:14px}
+  .bar{flex:1;height:9px;border-radius:999px;background:#e9edf5;overflow:hidden}
+  .bar > i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#2f5bd7,#28a17a);width:0;transition:width .5s cubic-bezier(.22,.61,.36,1)}
+  .pct{font-size:13px;font-weight:700;color:var(--brand);min-width:42px;text-align:right}
+
+  /* sections */
+  section{margin:20px 16px 0}
+  .sec-head{display:flex;align-items:center;justify-content:space-between;margin:0 2px 10px}
+  .sec-head h2{font-size:15px;margin:0;letter-spacing:-.2px}
+  .sec-head .count{font-size:11.5px;color:var(--ink-faint);font-weight:600;background:var(--card);border:1px solid var(--line);padding:3px 8px;border-radius:999px}
+
+  /* task list */
+  .list{display:flex;flex-direction:column;gap:9px}
+  .task{
+    background:var(--card);border-radius:14px;box-shadow:var(--shadow);
+    padding:12px 13px;display:flex;gap:11px;border-left:3px solid var(--line);
+  }
+  .task[data-status="완료"]{border-left-color:#2eb286}
+  .task[data-status="진행중"]{border-left-color:#4d7ee8}
+  .task[data-status="확인 대기"]{border-left-color:#e7b038}
+  .task[data-status="보류"]{border-left-color:#aab3c2}
+  .tcol{flex:0 0 46px;text-align:right;padding-top:2px}
+  .tcol .t{font-size:12px;font-weight:700;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+  .body{flex:1;min-width:0}
+  .title-row{display:flex;align-items:flex-start;gap:7px;flex-wrap:wrap}
+  .title{font-size:14.5px;font-weight:700;letter-spacing:-.2px;flex:1;min-width:0}
+  .badge{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap;align-self:center}
+  .badge.완료{background:var(--done-bg);color:var(--done)}
+  .badge.진행중{background:var(--prog-bg);color:var(--prog)}
+  .badge\.확인{background:var(--wait-bg);color:var(--wait)}
+  .badge.hold{background:var(--hold-bg);color:var(--hold)}
+  .badge[data-s="확인 대기"]{background:var(--wait-bg);color:var(--wait)}
+  .badge[data-s="보류"]{background:var(--hold-bg);color:var(--hold)}
+  .badge[data-s="완료"]{background:var(--done-bg);color:var(--done)}
+  .badge[data-s="진행중"]{background:var(--prog-bg);color:var(--prog)}
+  .res{font-size:12.5px;color:var(--ink-soft);margin-top:4px}
+  .cat{display:inline-block;margin-top:7px;font-size:10.5px;font-weight:700;color:#5b6b85;background:#f1f4f9;border-radius:6px;padding:2px 7px}
+
+  /* automation */
+  .auto{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:13px;display:flex;gap:12px}
+  .ico{flex:0 0 38px;height:38px;border-radius:11px;background:#f1f4fa;display:grid;place-items:center;font-size:19px}
+  .auto .body{flex:1;min-width:0}
+  .auto .nm{font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:7px;flex-wrap:wrap;letter-spacing:-.2px}
+  .state{font-size:10.5px;font-weight:700;padding:2.5px 8px;border-radius:999px}
+  .state.활성{background:var(--done-bg);color:var(--done)}
+  .state.예약{background:var(--prog-bg);color:var(--prog)}
+  .state.대기{background:var(--wait-bg);color:var(--wait)}
+  .state.종료{background:var(--hold-bg);color:var(--hold)}
+  .meta{font-size:12px;color:var(--ink-soft);margin-top:3px}
+  .meta b{color:var(--ink);font-weight:600}
+  .row{display:flex;gap:6px;align-items:baseline;margin-top:4px;font-size:12px}
+  .row .lb{flex:0 0 40px;color:var(--ink-faint);font-weight:600;font-size:11px}
+  .row .v{flex:1;color:var(--ink-soft);min-width:0}
+
+  /* waiting */
+  .wait-item{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:13px 14px;border-left:3px solid #e7b038}
+  .wait-item .t{font-size:14px;font-weight:700;display:flex;gap:8px;align-items:baseline;justify-content:space-between;letter-spacing:-.2px}
+  .wait-item .since{font-size:10.5px;color:var(--ink-faint);font-weight:700;white-space:nowrap}
+  .wait-item .d{font-size:12.5px;color:var(--ink-soft);margin-top:4px}
+
+  footer{margin:26px 16px 0;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-faint);line-height:1.6}
+  footer b{color:var(--ink-soft)}
+  .empty{background:var(--card);border-radius:14px;padding:18px;text-align:center;color:var(--ink-faint);font-size:13px;box-shadow:var(--shadow)}
+  .err{background:#fdecec;color:#a3282c;border:1px solid #f6cccc;border-radius:12px;padding:14px;font-size:13px;margin:16px}
+  @media (min-width:520px){
+    .stats{grid-template-columns:repeat(4,1fr)}
+    .task{padding:13px 15px}
+    h1{font-size:23px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="top-row">
+      <div class="brand">나이스 · Daily Execution</div>
+      <span class="live"><span class="dot"></span>업데이트 <span id="generated">-</span></span>
+    </div>
+    <h1>일일 실행 대시보드</h1>
+    <div class="sub">부탁하신 일이 어디까지 끝났는지 날짜별로 확인하세요.</div>
+  </header>
+
+  <nav class="datetabs" id="tabs" role="tablist" aria-label="날짜 선택"></nav>
+
+  <div class="summary">
+    <div class="dayline">
+      <span class="d" id="dayLabel">-</span>
+      <span class="hl" id="headline"></span>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="n" id="cTotal">0</div><div class="k">전체</div></div>
+      <div class="stat done"><div class="n" id="cDone">0</div><div class="k">완료</div></div>
+      <div class="stat prog"><div class="n" id="cProg">0</div><div class="k">진행·예약</div></div>
+      <div class="stat wait"><div class="n" id="cWait">0</div><div class="k">확인 대기</div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="barWrap"><i id="barFill"></i></div>
+      <div class="pct" id="pct">0%</div>
+    </div>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <h2>📋 요청 및 실행 내역</h2>
+      <span class="count" id="taskCount">-</span>
+    </div>
+    <div class="list" id="tasks"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>🔁 정기 자동화</h2>
+      <span class="count" id="autoCount">-</span>
+    </div>
+    <div class="list" id="autos"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>🙋 사용자 확인 대기</h2>
+      <span class="count" id="waitCount">-</span>
+    </div>
+    <div class="list" id="waits"></div>
+  </section>
+
+  <footer>
+    <div><b>개인정보 안내</b> · <span id="privacy"></span></div>
+    <div style="margin-top:6px">데이터 갱신 <span id="generated2">-</span> · 나이스(피클) 실행 기록 기준</div>
+  </footer>
+</div>
+
+<script>
+const EMBEDDED = window.__DASHBOARD_DATA__ || null;
+
+const pad = n => String(n).padStart(2, "0");
+function fmtTime(iso){
+  const d = new Date(iso);
+  if (isNaN(d)) return "-";
+  return `${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function countBy(tasks){
+  const c = {total: tasks.length, done:0, prog:0, wait:0, hold:0};
+  tasks.forEach(t=>{
+    if (t.status === "완료") c.done++;
+    else if (t.status === "확인 대기") c.wait++;
+    else if (t.status === "보류") c.hold++;
+    else c.prog++;
+  });
+  return c;
+}
+
+let DATA = null;
+let current = null;
+
+function renderTabs(){
+  const nav = document.getElementById("tabs");
+  nav.innerHTML = "";
+  DATA.dates.forEach((iso, i)=>{
+    const day = DATA.days[iso];
+    const b = document.createElement("button");
+    b.className = "tab";
+    b.type = "button";
+    b.setAttribute("role","tab");
+    b.dataset.date = iso;
+    b.setAttribute("aria-selected", iso === current ? "true" : "false");
+    // summary dot count uses day tasks
+    const c = countBy(day.tasks);
+    b.innerHTML = `<span class="d">${esc(day.label.replace("월 ","/").replace("일",""))}</span><span class="w">${esc(day.weekday)} · ${c.done}/${c.total}</span>`;
+    b.addEventListener("click", ()=> selectDate(iso));
+    nav.appendChild(b);
+  });
+}
+
+function selectDate(iso){
+  current = iso;
+  document.querySelectorAll(".tab").forEach(t=>{
+    t.setAttribute("aria-selected", t.dataset.date === iso ? "true" : "false");
+  });
+  renderDay();
+  const active = document.querySelector('.tab[aria-selected="true"]');
+  if (active && active.scrollIntoView) active.scrollIntoView({block:"nearest", inline:"nearest"});
+}
+
+function renderDay(){
+  const day = DATA.days[current];
+  const tasks = day.tasks.slice().sort((a,b)=> a.time.localeCompare(b.time));
+  const c = countBy(tasks);
+
+  document.getElementById("dayLabel").textContent = `${day.label} (${day.weekday})`;
+  document.getElementById("headline").textContent = day.headline || "";
+  document.getElementById("cTotal").textContent = c.total;
+  document.getElementById("cDone").textContent = c.done;
+  document.getElementById("cProg").textContent = c.prog + c.hold;
+  document.getElementById("cWait").textContent = c.wait;
+
+  const pct = c.total ? Math.round((c.done / c.total) * 100) : 0;
+  document.getElementById("pct").textContent = pct + "%";
+  document.getElementById("barFill").style.width = pct + "%";
+  const bar = document.getElementById("barWrap");
+  bar.setAttribute("aria-valuenow", String(pct));
+
+  const box = document.getElementById("tasks");
+  box.innerHTML = "";
+  if (!tasks.length){
+    box.innerHTML = '<div class="empty">이날 기록된 실행 내역이 없습니다.</div>';
+  } else {
+    tasks.forEach(t=>{
+      const el = document.createElement("article");
+      el.className = "task";
+      el.dataset.status = t.status;
+      const m = t.title.match(/^(.*)$/);
+      el.innerHTML = `
+        <div class="tcol"><div class="t">${esc(t.time)}</div></div>
+        <div class="body">
+          <div class="title-row">
+            <div class="title">${esc(t.title)}</div>
+            <span class="badge" data-s="${esc(t.status)}">${esc(t.status)}</span>
+          </div>
+          <div class="res">${esc(t.result || "")}</div>
+          ${t.category ? `<span class="cat">#${esc(t.category)}</span>` : ""}
+        </div>`;
+      box.appendChild(el);
+    });
+  }
+  document.getElementById("taskCount").textContent = `${c.total}건`;
+}
+
+function renderStatics(){
+  const autos = document.getElementById("autos");
+  autos.innerHTML = "";
+  DATA.automations.forEach(a=>{
+    const el = document.createElement("article");
+    el.className = "auto";
+    el.innerHTML = `
+      <div class="ico">${esc(a.icon || "•")}</div>
+      <div class="body">
+        <div class="nm">${esc(a.name)} <span class="state ${esc(a.state)}">${esc(a.state)}</span></div>
+        <div class="meta">주기 <b>${esc(a.schedule)}</b></div>
+        <div class="row"><span class="lb">최근</span><span class="v">${esc(a.last)}</span></div>
+        <div class="row"><span class="lb">다음</span><span class="v">${esc(a.next)}</span></div>
+      </div>`;
+    autos.appendChild(el);
+  });
+  document.getElementById("autoCount").textContent = `${DATA.automations.length}건`;
+
+  const waits = document.getElementById("waits");
+  waits.innerHTML = "";
+  DATA.waiting.forEach(w=>{
+    const el = document.createElement("article");
+    el.className = "wait-item";
+    el.innerHTML = `
+      <div class="t"><span>${esc(w.title)}</span><span class="since">${esc(w.since)}~</span></div>
+      <div class="d">${esc(w.detail)}</div>`;
+    waits.appendChild(el);
+  });
+  document.getElementById("waitCount").textContent = `${DATA.waiting.length}건`;
+
+  const gen = fmtTime(DATA.generated_at);
+  document.getElementById("generated").textContent = gen;
+  document.getElementById("generated2").textContent = gen;
+  document.getElementById("privacy").textContent = DATA.privacy_note || "";
+  document.title = "일일 실행 대시보드 · " + gen;
+}
+
+async function boot(){
+  try{
+    if (EMBEDDED){
+      DATA = EMBEDDED;
+    } else {
+      const res = await fetch("data.json", {cache:"no-store"});
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      DATA = await res.json();
+    }
+    if (!DATA || !DATA.days) throw new Error("데이터 형식 오류");
+    current = DATA.dates[DATA.dates.length - 1];
+    renderStatics();
+    renderTabs();
+    selectDate(current);
+  } catch(e){
+    document.querySelector(".wrap").insertAdjacentHTML("beforeend",
+      `<div class="err">데이터를 불러오지 못했습니다. (${esc(e.message)}) — data.json 경로를 확인해 주세요.</div>`);
+  }
+}
+boot();
+</script>
+</body>
+</html>
