@@ -262,6 +262,9 @@
     opacity:0;transition:opacity .25s,transform .25s
   }
   .mk.cur .lbl{opacity:1;transform:translateX(-50%) translateY(0)}
+  #map.lowzoom .mk:not(.cur){width:12px;height:12px;border-width:1px;background:rgba(240,220,180,.75);border-color:rgba(255,240,210,.9)}
+  #map.lowzoom .mk:not(.cur) .num{display:none}
+  #map.lowzoom .mk.done:not(.cur){background:rgba(227,187,116,.85)}
 
   /* ---------- TOC ---------- */
   #toc{
@@ -1174,14 +1177,18 @@
   // 전체 여정 보기
   el("ovBtn").addEventListener("click", function(){
     stopPlay();
-    const b = new maplibregl.LngLatBounds();
-    P.forEach(p=>b.extend([p.lng,p.lat]));
     const isMobile = window.innerWidth < 900;
-    map.fitBounds(b, {
+    const ch = cardHeight();
+    map.flyTo({
+      center:[33.48, 31.62],
+      zoom: isMobile ? 6.85 : 8.0,
+      pitch: isMobile ? 24 : 30,
+      bearing: 0,
       padding: isMobile
-        ? {top:84, bottom: Math.min(cardHeight()+16, window.innerHeight*0.62), left:18, right:18}
-        : {top:104, bottom:56, left:520, right:56},
-      pitch:38, bearing:-6, duration:2200, maxZoom:8.6, essential:true
+        ? {top:76, bottom: Math.min(ch*0.92, window.innerHeight*0.55), left:8, right:8}
+        : {top:96, bottom:64, left:470, right:48},
+      duration:2200,
+      essential:true
     });
   });
 
@@ -1198,6 +1205,9 @@
   map.on("pitch", onMove);
   map.on("idle", onMove);
   map.on("terrain", onMove);
+  map.on("zoom", function(){
+    el("map").classList.toggle("lowzoom", map.getZoom() < 8.4);
+  });
 
   let rzT = null;
   window.addEventListener("resize", function(){
