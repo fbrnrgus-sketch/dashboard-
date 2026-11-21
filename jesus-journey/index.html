@@ -408,7 +408,7 @@
       <p class="cen" id="cEn">Bethlehem</p>
     </div>
     <span class="cage" id="cAge">0세 · 탄생</span>
-    <button class="fold" id="foldBtn" type="button" aria-label="카드 접기">▴</button>
+    <button class="fold" id="foldBtn" type="button" aria-label="카드 접기">▾</button>
   </div>
   <div class="cbody">
 
@@ -912,7 +912,7 @@
       bearing: bearing,
       padding: pad,
       essential:true,
-      duration: instant ? 0 : 2100,
+      duration: instant ? 0 : 1900,
       curve: 1.42
     };
     if(instant){ map.jumpTo({center:opts.center, zoom:opts.zoom, pitch:opts.pitch, bearing:opts.bearing, padding:pad}); }
@@ -1148,8 +1148,9 @@
     clearInterval(playTimer);
     playTimer = setInterval(()=>{
       if(cur >= N-1){ stopPlay(); return; }
+      if(map && map.isMoving()) return;   // 이전 이동이 끝난 뒤에만 진행
       go(cur+1);
-    }, 4600);
+    }, 5200);
   }
   function stopPlay(){
     playing = false;
