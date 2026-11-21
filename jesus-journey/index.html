@@ -1198,7 +1198,7 @@
     const K = worldPx/(2*Math.PI);
     const mY = t => Math.log(Math.tan(Math.PI/4 + rad(t)/2));
     const latCam = (2*Math.atan(Math.exp(mY(midLat) - (H/2 - cy)/K)) - Math.PI/2)*180/Math.PI;
-    return {center:[lngCam, latCam], zoom:z, pitch: isMobile?16:22, bearing:0};
+    return {center:[lngCam, latCam], zoom:z, pitch: isMobile?16:22, bearing:0, padding:pad};
   }
 
   el("ovBtn").addEventListener("click", function(){
@@ -1209,6 +1209,7 @@
       zoom: cam.zoom,
       pitch: cam.pitch,
       bearing: cam.bearing,
+      padding: cam.padding,
       duration: 2200,
       essential: true
     });
