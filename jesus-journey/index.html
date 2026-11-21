@@ -1179,17 +1179,26 @@
     stopPlay();
     const isMobile = window.innerWidth < 900;
     const ch = cardHeight();
-    map.flyTo({
-      center:[33.48, 31.62],
-      zoom: isMobile ? 6.85 : 8.0,
-      pitch: isMobile ? 24 : 30,
-      bearing: 0,
-      padding: isMobile
-        ? {top:76, bottom: Math.min(ch*0.92, window.innerHeight*0.55), left:8, right:8}
-        : {top:96, bottom:64, left:470, right:48},
-      duration:2200,
-      essential:true
-    });
+    const pad = isMobile
+      ? {top:72, bottom: Math.min(ch*0.9, window.innerHeight*0.54), left:6, right:6}
+      : {top:92, bottom:48, left:466, right:36};
+    const b = new maplibregl.LngLatBounds();
+    P.forEach(function(p){ b.extend([p.lng, p.lat]); });
+    let cam = null;
+    try{ cam = map.cameraForBounds(b, {padding:pad, bearing:0, pitch:0}); }catch(e){}
+    if(cam && cam.center && isFinite(cam.zoom)){
+      map.flyTo({
+        center: cam.center,
+        zoom: cam.zoom - 0.18,
+        pitch: isMobile ? 20 : 26,
+        bearing: 0,
+        padding: pad,
+        duration: 2200,
+        essential: true
+      });
+    }else{
+      map.flyTo({center:[33.5,31.6], zoom: isMobile?6.6:7.2, pitch:22, bearing:0, duration:2200, essential:true});
+    }
   });
 
   // 키보드
