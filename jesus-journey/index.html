@@ -395,6 +395,12 @@
 </head>
 <body>
 
+<script>
+  window.__errs = [];
+  window.addEventListener("error", function(e){ window.__errs.push(String(e.message || e.error)); });
+  window.addEventListener("unhandledrejection", function(e){ window.__errs.push("promise: " + String(e.reason)); });
+</script>
+
 <div id="map"></div>
 
 <header id="hdr">
@@ -831,12 +837,12 @@
     map.addLayer({
       id:"route-all-casing", type:"line", source:"route-all",
       layout:{"line-join":"round","line-cap":"round"},
-      paint:{"line-color":"#05141d","line-width":7,"line-opacity":0.45,"line-blur":2.5}
+      paint:{"line-color":"#05141d","line-width":8,"line-opacity":0.4,"line-blur":2.5}
     });
     map.addLayer({
       id:"route-all", type:"line", source:"route-all",
       layout:{"line-join":"round","line-cap":"round"},
-      paint:{"line-color":"#e0b678","line-width":2.4,"line-opacity":0.8,"line-dasharray":[2.2,1.5]}
+      paint:{"line-color":"#ecc180","line-width":2.8,"line-opacity":0.88,"line-dasharray":[2.2,1.5]}
     });
     map.addLayer({
       id:"route-done-glow", type:"line", source:"route-done",
@@ -846,7 +852,7 @@
     map.addLayer({
       id:"route-done", type:"line", source:"route-done",
       layout:{"line-join":"round","line-cap":"round"},
-      paint:{"line-color":"#f6d79b","line-width":3.6,"line-opacity":0.95}
+      paint:{"line-color":"#f6d79b","line-width":4.2,"line-opacity":0.95}
     });
     map.addLayer({
       id:"route-last-glow", type:"line", source:"route-last",
@@ -856,7 +862,7 @@
     map.addLayer({
       id:"route-last", type:"line", source:"route-last",
       layout:{"line-join":"round","line-cap":"round"},
-      paint:{"line-color":"#ffcb8e","line-width":5,"line-opacity":1}
+      paint:{"line-color":"#ffcb8e","line-width":5.6,"line-opacity":1}
     });
 
     // 지점 마커
@@ -1005,7 +1011,7 @@
         el("bEleBox").className = "badge flat";
       }
       el("bTime").textContent = fmtDur(l.hours);
-      el("bTimeSub").textContent = "하루 30km 기준 약 "+(l.days===1?"당일":l.days+"일");
+      el("bTimeSub").textContent = l.days===1 ? "하루 30km 기준 · 당일" : "하루 30km 기준 약 "+l.days+"일";
     }
 
     // 진행률
@@ -1111,7 +1117,7 @@
 
     const cx = X(cur), cy = Y(P[cur].elevation_m);
     const label = Math.round(P[cur].elevation_m).toLocaleString("ko-KR")+"m";
-    const labelX = Math.min(Math.max(cx, pad.l+16), w-30);
+    const labelX = Math.min(Math.max(cx, pad.l+24), w-32);
     const labelY = cy < pad.t+18 ? cy+16 : cy-8;
 
     profileEl.setAttribute("viewBox","0 0 "+w+" "+h);
