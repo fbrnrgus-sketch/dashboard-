@@ -968,7 +968,7 @@
     const limit = isMobile ? cardTop - 80 : window.innerHeight * 0.62;
     if(y > limit){
       const d = Math.min(y - limit, window.innerHeight * 0.42);
-      if(d > 6) map.panBy([0, -d], {duration: 480, essential:true});
+      if(d > 6) map.panBy([0, d], {duration: 480, essential:true});
     }
   }
 
