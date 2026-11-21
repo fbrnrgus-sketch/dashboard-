@@ -965,11 +965,12 @@
     const y = r.top + r.height/2;
     const isMobile = window.innerWidth < 900;
     const cardTop = el("card").getBoundingClientRect().top;
-    const limit = isMobile ? cardTop - 80 : window.innerHeight * 0.62;
-    if(y > limit){
-      const d = Math.min(y - limit, window.innerHeight * 0.42);
-      if(d > 6) map.panBy([0, d], {duration: 480, essential:true});
-    }
+    const botLimit = isMobile ? cardTop - 90 : window.innerHeight * 0.62;
+    const topLimit = isMobile ? 128 : 118;
+    let d = 0;
+    if(y > botLimit) d = Math.min(y - botLimit, window.innerHeight * 0.42);
+    else if(y < topLimit) d = -Math.min(topLimit - y, window.innerHeight * 0.42);
+    if(Math.abs(d) > 6) map.panBy([0, d], {duration: 480, essential:true});
   }
 
   function go(i, opt){
