@@ -936,12 +936,12 @@
     const isMobile = window.innerWidth < 900;
     const pad = isMobile
       ? {bottom: Math.min(cardHeight()+18, window.innerHeight*0.62), top: 70, left: 0, right: 0}
-      : {bottom: 40, top: 92, left: 480, right: 20};
+      : {bottom: 200, top: 92, left: 500, right: 30};
 
     const opts = {
       center:[p.lng, p.lat],
       zoom: zoom,
-      pitch: i===0 ? 55 : 62,
+      pitch: i===0 ? 52 : 57,
       bearing: bearing,
       padding: pad,
       essential:true,
