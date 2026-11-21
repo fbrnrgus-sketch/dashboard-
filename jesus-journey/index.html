@@ -353,6 +353,24 @@
     #profile{height:120px}
     #hud{font-size:11px;min-width:150px;right:18px;top:calc(var(--hdr) + 56px)}
   }
+  @media (max-width:899px){
+    .cbody{padding:0 12px;scrollbar-width:none}
+    .cbody::-webkit-scrollbar{width:0;height:0}
+    .chead{padding:2px 12px 5px}
+    .cname{font-size:16px}
+    .meta{margin-top:5px;gap:10px}
+    .scripture{margin-top:7px;font-size:11px}
+    .summary{margin-top:5px;font-size:12px;line-height:1.5}
+    .badges{margin-top:8px;gap:5px}
+    .badge{padding:5px 8px}
+    .badge .bv{font-size:12.5px}
+    .badge .bs{font-size:8.5px}
+    .profwrap{margin-top:8px}
+    #profile{height:92px}
+    .foot{font-size:8.5px;margin-bottom:6px}
+    .ctl{padding:6px 12px calc(8px + env(safe-area-inset-bottom,0px))}
+    .nav{height:36px}
+  }
   @media (max-width:700px){
     .sub{display:none}
     h1{font-size:14px}
