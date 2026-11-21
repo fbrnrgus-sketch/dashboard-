@@ -339,6 +339,11 @@
     #profile{height:120px}
     #hud{font-size:11px;min-width:150px;right:18px;top:calc(var(--hdr) + 56px)}
   }
+  @media (max-width:560px){
+    #styleLbl, #ovBtn .lb{display:none}
+    .ibtn{padding:6px 8px}
+    h1{font-size:14px}
+  }
   @media (max-width:380px){
     .cage{display:none}
     .badge .bv{font-size:12.5px}
@@ -362,6 +367,9 @@
   </div>
   <div class="hdr-right">
     <span id="ageBadge">0세 · 탄생</span>
+    <button class="ibtn" id="ovBtn" type="button" title="전체 여정 보기">
+      <span class="ico">🗺</span><span class="lb">전체</span>
+    </button>
     <button class="ibtn" id="styleBtn" type="button" title="지도 스타일 전환">
       <span class="ico">🛰</span><span id="styleLbl">위성</span>
     </button>
@@ -782,32 +790,32 @@
     map.addLayer({
       id:"route-all-casing", type:"line", source:"route-all",
       layout:{"line-join":"round","line-cap":"round"},
-      paint:{"line-color":"#04121a","line-width":5,"line-opacity":0.5,"line-blur":2}
+      paint:{"line-color":"#05141d","line-width":7,"line-opacity":0.45,"line-blur":2.5}
     });
     map.addLayer({
       id:"route-all", type:"line", source:"route-all",
       layout:{"line-join":"round","line-cap":"round"},
-      paint:{"line-color":"#d9b071","line-width":1.8,"line-opacity":0.55,"line-dasharray":[2,1.6]}
+      paint:{"line-color":"#e0b678","line-width":2.4,"line-opacity":0.8,"line-dasharray":[2.2,1.5]}
     });
     map.addLayer({
       id:"route-done-glow", type:"line", source:"route-done",
       layout:{"line-join":"round","line-cap":"round"},
-      paint:{"line-color":"#f4cf8c","line-width":11,"line-opacity":0.18,"line-blur":9}
+      paint:{"line-color":"#f4cf8c","line-width":12,"line-opacity":0.2,"line-blur":9}
     });
     map.addLayer({
       id:"route-done", type:"line", source:"route-done",
       layout:{"line-join":"round","line-cap":"round"},
-      paint:{"line-color":"#f2cd8b","line-width":3,"line-opacity":0.95}
+      paint:{"line-color":"#f6d79b","line-width":3.6,"line-opacity":0.95}
     });
     map.addLayer({
       id:"route-last-glow", type:"line", source:"route-last",
       layout:{"line-join":"round","line-cap":"round"},
-      paint:{"line-color":"#ffb877","line-width":16,"line-opacity":0.22,"line-blur":12}
+      paint:{"line-color":"#ffb877","line-width":17,"line-opacity":0.26,"line-blur":12}
     });
     map.addLayer({
       id:"route-last", type:"line", source:"route-last",
       layout:{"line-join":"round","line-cap":"round"},
-      paint:{"line-color":"#ffc98d","line-width":4.4,"line-opacity":1}
+      paint:{"line-color":"#ffcb8e","line-width":5,"line-opacity":1}
     });
 
     // 지점 마커
@@ -985,7 +993,13 @@
     el("hLat").textContent = c.lat.toFixed(4)+"°";
     el("hLng").textContent = c.lng.toFixed(4)+"°";
     let e = null;
-    try{ e = map.queryTerrainElevation(c, {exaggerated:false}); }catch(err){}
+    try{
+      const raw = map.queryTerrainElevation(c);
+      const plain = map.queryTerrainElevation(c, {exaggerated:false});
+      const ex = (map.getTerrain() && map.getTerrain().exaggeration) || 1;
+      e = (raw!==null && raw!==undefined && Math.abs(raw-plain)<0.01) ? raw/ex : plain;
+      if(e===0 && Math.abs(P[cur].elevation_m) > 5) e = P[cur].elevation_m; // DEM 아직 미로드
+    }catch(err){ e = null; }
     if(e===null || e===undefined || !isFinite(e)) e = P[cur].elevation_m;
     el("hEle").textContent = Math.round(e).toLocaleString("ko-KR")+" m";
   }
@@ -1157,6 +1171,20 @@
     el("styleLbl").textContent = styleMode==="sat" ? "위성" : "지형";
   });
 
+  // 전체 여정 보기
+  el("ovBtn").addEventListener("click", function(){
+    stopPlay();
+    const b = new maplibregl.LngLatBounds();
+    P.forEach(p=>b.extend([p.lng,p.lat]));
+    const isMobile = window.innerWidth < 900;
+    map.fitBounds(b, {
+      padding: isMobile
+        ? {top:84, bottom: Math.min(cardHeight()+16, window.innerHeight*0.62), left:18, right:18}
+        : {top:104, bottom:56, left:520, right:56},
+      pitch:38, bearing:-6, duration:2200, maxZoom:8.6, essential:true
+    });
+  });
+
   // 키보드
   document.addEventListener("keydown", function(ev){
     if(ev.key === "ArrowRight"){ go(cur+1,{user:true}); }
@@ -1168,6 +1196,8 @@
   map.on("move", onMove);
   map.on("moveend", onMove);
   map.on("pitch", onMove);
+  map.on("idle", onMove);
+  map.on("terrain", onMove);
 
   let rzT = null;
   window.addEventListener("resize", function(){
