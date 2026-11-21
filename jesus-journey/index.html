@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b1620" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="description" content="이스라엘·팔레스타인 3D 지형 위에 예수님의 탄생부터 승천까지의 여정을 나이·시간순으로 담은 인터랙티브 지도." />
+<title>예수님의 여정 · 3D 지도</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230b1620'/%3E%3Cpath d='M50 20v62M32 40h36' stroke='%23e3bb74' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E" />
+<link href="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.css" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#f2ece0;
+    --ink-dim:#c8bda9;
+    --ink-faint:#8e9aa6;
+    --gold:#e3bb74;
+    --gold-hi:#f8e3b6;
+    --gold-deep:#b98f45;
+    --glass:rgba(9,18,26,.82);
+    --glass-2:rgba(9,18,26,.94);
+    --line:rgba(227,187,116,.24);
+    --up:#f0a35e;
+    --down:#78c9c1;
+    --radius:18px;
+    --hdr:60px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden}
+  body{
+    background:#08121a;
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","맑은 고딕","Noto Sans KR",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.45;
+    overscroll-behavior:none;
+  }
+  button{font-family:inherit}
+
+  /* ---------- map ---------- */
+  #map{position:fixed;inset:0;background:linear-gradient(180deg,#0a1822 0%,#122b38 42%,#1b3a45 68%,#2a2a24 100%)}
+  .maplibregl-canvas:focus{outline:none}
+  #map::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 80% at 50% 42%,rgba(0,0,0,0) 40%,rgba(4,10,16,.34) 100%);
+  }
+  .maplibregl-ctrl-attrib{background:rgba(9,18,26,.7)!important;border-radius:8px!important;font-size:10px!important}
+  .maplibregl-ctrl-attrib a{color:#b9c6d2!important}
+  .maplibregl-ctrl-group{background:rgba(9,18,26,.8)!important;border:1px solid var(--line)!important;border-radius:12px!important;overflow:hidden}
+  .maplibregl-ctrl-group button+button{border-top:1px solid var(--line)!important}
+  .maplibregl-ctrl-icon{filter:invert(1) hue-rotate(180deg) brightness(1.4)}
+
+  /* ---------- header ---------- */
+  #hdr{
+    position:fixed;top:0;left:0;right:0;z-index:30;
+    display:flex;align-items:center;gap:10px;
+    padding:8px 12px;height:var(--hdr);
+    background:linear-gradient(180deg,rgba(6,13,19,.94) 0%,rgba(6,13,19,.72) 62%,rgba(6,13,19,0) 100%);
+    padding-top:calc(8px + env(safe-area-inset-top,0px));
+    height:calc(var(--hdr) + env(safe-area-inset-top,0px));
+  }
+  .brand{display:flex;align-items:center;gap:9px;min-width:0;flex:1}
+  .mark{
+    width:31px;height:31px;flex:0 0 31px;border-radius:9px;
+    display:grid;place-items:center;
+    background:linear-gradient(150deg,#1d3644,#0d1c26);
+    border:1px solid rgba(227,187,116,.5);
+    color:var(--gold);font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)
+  }
+  h1{margin:0;font-size:15px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+  h1 em{font-style:normal;color:var(--gold)}
+  .sub{font-size:10.5px;color:var(--ink-faint);letter-spacing:.04em;white-space:nowrap;margin-top:-1px}
+  .hdr-right{display:flex;align-items:center;gap:6px}
+  #ageBadge{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11px;font-weight:600;color:var(--gold-hi);
+    background:rgba(227,187,116,.12);
+    border:1px solid rgba(227,187,116,.34);
+    padding:4px 9px;border-radius:999px;white-space:nowrap;
+    max-width:44vw;overflow:hidden;text-overflow:ellipsis
+  }
+  .ibtn{
+    appearance:none;cursor:pointer;color:var(--ink);
+    background:rgba(11,22,32,.8);
+    border:1px solid rgba(227,187,116,.28);
+    border-radius:10px;padding:6px 10px;font-size:11.5px;font-weight:600;
+    display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    transition:border-color .18s,background .18s
+  }
+  .ibtn:hover{border-color:rgba(227,187,116,.6);background:rgba(19,36,48,.9)}
+  .ibtn:active{transform:translateY(1px)}
+  .ibtn .ico{font-size:12px;line-height:1;color:var(--gold)}
+
+  /* ---------- HUD ---------- */
+  #hud{
+    position:fixed;z-index:20;
+    top:calc(var(--hdr) + env(safe-area-inset-top,0px) + 8px);right:10px;
+    background:rgba(8,17,24,.72);
+    border:1px solid rgba(227,187,116,.22);
+    border-radius:12px;padding:7px 10px 8px;
+    font-variant-numeric:tabular-nums;
+    font-size:10.5px;color:var(--ink-dim);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    box-shadow:0 6px 20px rgba(0,0,0,.28);
+    min-width:132px;pointer-events:none
+  }
+  #hud .row{display:flex;justify-content:space-between;gap:10px;line-height:1.55}
+  #hud .k{color:#7d8c99;font-size:9.5px;letter-spacing:.06em}
+  #hud .v{color:#e8dfcd;font-weight:600}
+  #hud .v.ele{color:var(--gold-hi)}
+  #hud .hd{font-size:9px;letter-spacing:.1em;color:#6e7d8a;margin-bottom:3px;text-transform:uppercase}
+
+  /* ---------- card ---------- */
+  #card{
+    position:fixed;z-index:25;left:0;right:0;bottom:0;
+    display:flex;flex-direction:column;
+    max-height:62vh;
+    background:linear-gradient(180deg,rgba(11,21,29,.95) 0%,rgba(7,14,20,.985) 60%);
+    border-top:1px solid rgba(227,187,116,.4);
+    border-radius:20px 20px 0 0;
+    box-shadow:0 -14px 40px rgba(0,0,0,.5);
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    transition:max-height .25s ease;
+  }
+  #card::before{
+    content:"";position:absolute;top:-1px;left:0;height:2px;width:var(--prog,0%);
+    background:linear-gradient(90deg,var(--gold-deep),var(--gold-hi));
+    border-radius:2px;transition:width .5s ease;box-shadow:0 0 12px rgba(227,187,116,.6)
+  }
+  .grip{width:38px;height:3px;border-radius:3px;background:rgba(227,187,116,.28);margin:7px auto 0;flex:0 0 auto}
+  .cbody{overflow-y:auto;overscroll-behavior:contain;padding:6px 14px 2px;flex:1 1 auto;-webkit-overflow-scrolling:touch}
+  .chead{display:flex;align-items:flex-start;gap:8px;margin-top:2px}
+  .rank{
+    font-size:10px;font-weight:700;color:var(--gold);
+    border:1px solid rgba(227,187,116,.4);border-radius:7px;
+    padding:2px 6px;margin-top:3px;font-variant-numeric:tabular-nums;letter-spacing:.02em;flex:0 0 auto
+  }
+  .names{min-width:0;flex:1}
+  .cname{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+  .cen{margin:1px 0 0;font-size:10.5px;color:var(--ink-faint);letter-spacing:.06em;text-transform:uppercase}
+  .cage{
+    flex:0 0 auto;font-size:10.5px;font-weight:600;color:var(--gold-hi);
+    background:rgba(227,187,116,.13);border:1px solid rgba(227,187,116,.3);
+    border-radius:8px;padding:3px 7px;margin-top:1px;text-align:center;max-width:34%
+  }
+
+  .meta{display:flex;gap:14px;margin:7px 0 0;font-size:10.5px;color:var(--ink-dim)}
+  .meta span{display:inline-flex;align-items:center;gap:4px}
+  .meta .n{color:#efe6d4;font-weight:600;font-variant-numeric:tabular-nums}
+  .meta .lab{color:#7f8e9b;font-size:9.5px}
+
+  .scripture{
+    display:inline-flex;align-items:center;gap:6px;margin:9px 0 0;
+    font-size:11.5px;color:#e9d3a8;
+    border-left:2px solid var(--gold-deep);padding-left:8px;
+    font-weight:600;letter-spacing:.01em
+  }
+  .scripture .ico{font-size:10px;color:var(--gold)}
+
+  .summary{margin:7px 0 0;font-size:12.5px;color:#d5cdbd;line-height:1.62;word-break:keep-all}
+
+  .badges{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:11px 0 0}
+  .badge{
+    background:rgba(255,255,255,.035);
+    border:1px solid rgba(255,255,255,.07);
+    border-radius:10px;padding:6px 9px;min-width:0
+  }
+  .badge .bk{display:block;font-size:9px;letter-spacing:.08em;color:#78889a;text-transform:uppercase}
+  .badge .bv{display:block;font-size:13.5px;font-weight:700;color:#f4ecdc;font-variant-numeric:tabular-nums;line-height:1.3}
+  .badge .bs{display:block;font-size:9px;color:#8494a4;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .badge.up .bv{color:var(--up)}
+  .badge.down .bv{color:var(--down)}
+  .badge.flat .bv{color:#d9d2c4}
+
+  .profwrap{margin:12px 0 2px;position:relative}
+  .profhead{display:flex;justify-content:space-between;align-items:baseline;font-size:9.5px;color:#7a8a99;letter-spacing:.06em;margin-bottom:1px}
+  .profhead b{color:#b9ab92;font-weight:600;letter-spacing:.02em}
+  #profile{display:block;width:100%;height:104px;cursor:pointer;touch-action:pan-y}
+
+  .foot{font-size:9px;color:#63717e;margin:2px 0 10px;line-height:1.5}
+
+  /* ---------- controls ---------- */
+  .ctl{
+    flex:0 0 auto;padding:8px 14px calc(10px + env(safe-area-inset-bottom,0px));
+    border-top:1px solid rgba(255,255,255,.06);
+    background:rgba(5,11,16,.6)
+  }
+  .ctlrow{display:flex;align-items:center;gap:7px}
+  .nav{
+    appearance:none;cursor:pointer;border-radius:11px;
+    border:1px solid rgba(227,187,116,.3);
+    background:rgba(19,33,44,.9);color:var(--ink);
+    height:38px;font-size:12.5px;font-weight:600;
+    display:inline-flex;align-items:center;justify-content:center;gap:5px;
+    transition:background .16s,border-color .16s
+  }
+  .nav:hover{background:rgba(28,48,62,.95);border-color:rgba(227,187,116,.55)}
+  .nav:active{transform:translateY(1px)}
+  .nav.side{width:46px;font-size:15px;color:var(--gold)}
+  .nav.play{flex:1;background:linear-gradient(150deg,rgba(227,187,116,.2),rgba(227,187,116,.08));border-color:rgba(227,187,116,.5);color:var(--gold-hi)}
+  .nav.play.on{background:linear-gradient(150deg,rgba(227,187,116,.36),rgba(227,187,116,.16))}
+  .nav .pi{font-size:11px}
+  .slider{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .slider .t{font-size:9.5px;color:#7c8b98;font-variant-numeric:tabular-nums;letter-spacing:.04em;flex:0 0 auto}
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;flex:1;height:22px;background:transparent;margin:0
+  }
+  input[type=range]::-webkit-slider-runnable-track{
+    height:3px;border-radius:3px;
+    background:linear-gradient(90deg,var(--gold) 0%,var(--gold) var(--fill,0%),rgba(255,255,255,.14) var(--fill,0%),rgba(255,255,255,.14) 100%)
+  }
+  input[type=range]::-moz-range-track{height:3px;border-radius:3px;background:rgba(255,255,255,.14)}
+  input[type=range]::-moz-range-progress{height:3px;border-radius:3px;background:var(--gold)}
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--gold-hi);border:2px solid #0b1620;margin-top:-5.5px;
+    box-shadow:0 0 0 3px rgba(227,187,116,.22),0 1px 4px rgba(0,0,0,.5)
+  }
+  input[type=range]::-moz-range-thumb{
+    width:14px;height:14px;border-radius:50%;background:var(--gold-hi);border:2px solid #0b1620;
+    box-shadow:0 0 0 3px rgba(227,187,116,.22)
+  }
+
+  /* ---------- markers ---------- */
+  .mk{
+    position:relative;width:22px;height:22px;padding:0;border-radius:50%;
+    cursor:pointer;appearance:none;
+    border:1.5px solid rgba(227,187,116,.55);
+    background:rgba(9,18,26,.8);
+    color:#d9cbb2;font-size:9.5px;font-weight:700;line-height:1;
+    display:grid;place-items:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.55);
+    transition:transform .2s,border-color .2s,background .2s,color .2s;
+    font-variant-numeric:tabular-nums
+  }
+  .mk:hover{transform:scale(1.18);border-color:var(--gold-hi);z-index:5}
+  .mk.done{background:rgba(227,187,116,.2);border-color:rgba(227,187,116,.7);color:#f5e5c4}
+  .mk.cur{
+    width:30px;height:30px;font-size:11px;
+    background:linear-gradient(150deg,#f8e3b6,#d7ab61);
+    color:#17222b;border-color:#fff6e2;
+    box-shadow:0 0 0 3px rgba(227,187,116,.3),0 4px 14px rgba(0,0,0,.6);
+    z-index:6
+  }
+  .mk.cur::after{
+    content:"";position:absolute;inset:-1px;border-radius:50%;
+    border:1.5px solid rgba(248,227,182,.75);
+    animation:pulse 2.2s ease-out infinite
+  }
+  @keyframes pulse{
+    0%{transform:scale(1);opacity:.9}
+    70%{transform:scale(2.05);opacity:0}
+    100%{transform:scale(2.05);opacity:0}
+  }
+  .mk .lbl{
+    position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%) translateY(4px);
+    font-size:11px;font-weight:700;color:#fbf2df;white-space:nowrap;
+    background:rgba(8,16,22,.9);border:1px solid rgba(227,187,116,.4);
+    padding:2px 7px;border-radius:7px;pointer-events:none;
+    opacity:0;transition:opacity .25s,transform .25s
+  }
+  .mk.cur .lbl{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ---------- TOC ---------- */
+  #toc{
+    position:fixed;inset:0;z-index:40;display:none;
+    background:rgba(3,8,12,.55);
+    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)
+  }
+  #toc.open{display:block}
+  .tocpanel{
+    position:absolute;right:0;top:0;bottom:0;width:min(400px,88vw);
+    background:linear-gradient(180deg,#0c1820,#070f15);
+    border-left:1px solid var(--line);
+    box-shadow:-16px 0 48px rgba(0,0,0,.55);
+    display:flex;flex-direction:column;animation:slidein .26s ease
+  }
+  @keyframes slidein{from{transform:translateX(24px);opacity:.4}to{transform:translateX(0);opacity:1}}
+  .tochead{display:flex;align-items:center;justify-content:space-between;padding:14px 14px 10px;border-bottom:1px solid rgba(255,255,255,.07);gap:10px}
+  .tochead h2{margin:0;font-size:13.5px;font-weight:700;letter-spacing:.02em}
+  .tochead h2 small{display:block;font-size:10px;color:var(--ink-faint);font-weight:400;margin-top:2px;letter-spacing:.04em}
+  .toclist{overflow-y:auto;padding:6px 8px calc(14px + env(safe-area-inset-bottom,0px));flex:1}
+  .tocrow{
+    width:100%;text-align:left;appearance:none;cursor:pointer;
+    display:flex;gap:10px;align-items:center;
+    background:transparent;border:1px solid transparent;border-radius:11px;
+    padding:8px 9px;color:var(--ink);margin-bottom:2px
+  }
+  .tocrow:hover{background:rgba(255,255,255,.05)}
+  .tocrow.cur{background:rgba(227,187,116,.12);border-color:rgba(227,187,116,.35)}
+  .tocrow .n{
+    flex:0 0 22px;height:22px;border-radius:50%;display:grid;place-items:center;
+    font-size:9.5px;font-weight:700;color:#c9bda6;
+    border:1px solid rgba(227,187,116,.3);font-variant-numeric:tabular-nums
+  }
+  .tocrow.cur .n{background:var(--gold);color:#17222b;border-color:var(--gold)}
+  .tocrow .txt{min-width:0;flex:1}
+  .tocrow .nm{display:block;font-size:12.5px;font-weight:600;line-height:1.3}
+  .tocrow .ag{display:block;font-size:10px;color:#8b9aa7;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tocrow .km{font-size:10px;color:#7f8e9b;font-variant-numeric:tabular-nums;flex:0 0 auto}
+
+  /* ---------- splash / error ---------- */
+  #splash{
+    position:fixed;inset:0;z-index:60;display:grid;place-items:center;
+    background:radial-gradient(80% 60% at 50% 40%,#11242f 0%,#060d13 100%);
+    transition:opacity .55s ease,visibility .55s
+  }
+  #splash.hide{opacity:0;visibility:hidden}
+  .spin{text-align:center}
+  .spin .cross{font-size:26px;color:var(--gold);animation:breathe 2s ease-in-out infinite}
+  @keyframes breathe{0%,100%{opacity:.45;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
+  .spin p{margin:12px 0 0;font-size:11.5px;color:#9aa9b6;letter-spacing:.1em}
+  #err{
+    position:fixed;z-index:70;left:12px;right:12px;top:calc(var(--hdr) + 12px);
+    display:none;padding:10px 12px;border-radius:12px;
+    background:rgba(80,20,20,.92);border:1px solid rgba(255,140,120,.5);
+    color:#ffd9d0;font-size:11.5px;line-height:1.5
+  }
+
+  /* ---------- desktop ---------- */
+  @media (min-width:900px){
+    :root{--hdr:64px}
+    h1{font-size:16.5px}
+    .sub{font-size:11px}
+    #card{
+      left:20px;right:auto;bottom:20px;width:456px;
+      max-height:calc(100vh - 104px);
+      border-radius:var(--radius);
+      border:1px solid rgba(227,187,116,.32);
+      box-shadow:0 24px 60px rgba(0,0,0,.55)
+    }
+    .cbody{padding:8px 18px 4px}
+    .ctl{padding:10px 18px 14px}
+    .cname{font-size:19px}
+    .summary{font-size:13px}
+    .badges{grid-template-columns:1fr 1fr 1fr 1fr}
+    #profile{height:120px}
+    #hud{font-size:11px;min-width:150px;right:18px;top:calc(var(--hdr) + 56px)}
+  }
+  @media (max-width:380px){
+    .cage{display:none}
+    .badge .bv{font-size:12.5px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001s!important;transition-duration:.001s!important}
+  }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<header id="hdr">
+  <div class="brand">
+    <div class="mark">✝</div>
+    <div style="min-width:0">
+      <h1>예수님의 <em>여정</em></h1>
+      <div class="sub">이스라엘 3D 지도 · 탄생에서 승천까지</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <span id="ageBadge">0세 · 탄생</span>
+    <button class="ibtn" id="styleBtn" type="button" title="지도 스타일 전환">
+      <span class="ico">🛰</span><span id="styleLbl">위성</span>
+    </button>
+    <button class="ibtn" id="tocBtn" type="button" title="전체 목차">
+      <span class="ico">☰</span><span>목차</span>
+    </button>
+  </div>
+</header>
+
+<div id="hud">
+  <div class="hd">카메라 위치</div>
+  <div class="row"><span class="k">LAT</span><span class="v" id="hLat">–</span></div>
+  <div class="row"><span class="k">LNG</span><span class="v" id="hLng">–</span></div>
+  <div class="row"><span class="k">ELEV</span><span class="v ele" id="hEle">–</span></div>
+</div>
+
+<section id="card" aria-label="현재 지점 정보">
+  <div class="grip"></div>
+  <div class="cbody">
+    <div class="chead">
+      <span class="rank" id="cRank">01 / 26</span>
+      <div class="names">
+        <h2 class="cname" id="cName">베들레헴 탄생</h2>
+        <p class="cen" id="cEn">Bethlehem</p>
+      </div>
+      <span class="cage" id="cAge">0세 · 탄생</span>
+    </div>
+
+    <div class="meta">
+      <span><span class="lab">위도</span> <b class="n" id="cLat">–</b></span>
+      <span><span class="lab">경도</span> <b class="n" id="cLng">–</b></span>
+      <span><span class="lab">해발</span> <b class="n" id="cEle">–</b></span>
+    </div>
+
+    <div class="scripture"><span class="ico">📖</span><span id="cScript">–</span></div>
+    <p class="summary" id="cSummary">–</p>
+
+    <div class="badges">
+      <div class="badge" id="bKmBox">
+        <span class="bk">구간 거리</span>
+        <span class="bv" id="bKm">–</span>
+        <span class="bs" id="bKmSub">직전 지점에서</span>
+      </div>
+      <div class="badge" id="bTotBox">
+        <span class="bk">누적 거리</span>
+        <span class="bv" id="bTot">–</span>
+        <span class="bs" id="bTotSub">출발지 대비</span>
+      </div>
+      <div class="badge" id="bEleBox">
+        <span class="bk">고도 변화</span>
+        <span class="bv" id="bEle">–</span>
+        <span class="bs" id="bEleSub">–</span>
+      </div>
+      <div class="badge" id="bTimeBox">
+        <span class="bk">도보 예상</span>
+        <span class="bv" id="bTime">–</span>
+        <span class="bs" id="bTimeSub">–</span>
+      </div>
+    </div>
+
+    <div class="profwrap">
+      <div class="profhead">
+        <span><b>고도 프로파일</b> · 해발 0m 기준</span>
+        <span id="profRange">−390m ~ +800m</span>
+      </div>
+      <svg id="profile" role="img" aria-label="여정 전체 고도 프로파일"></svg>
+      <div class="foot" id="footNote">거리는 직선거리에 고대 도보 경로 보정(×1.18~1.25)을 적용한 추정치이며, 도보 시간은 평지 4km/h·오르막 100m당 10분 기준의 근사값입니다.</div>
+    </div>
+  </div>
+
+  <div class="ctl">
+    <div class="ctlrow">
+      <button class="nav side" id="prevBtn" type="button" aria-label="이전 지점">◀</button>
+      <button class="nav play" id="playBtn" type="button" aria-label="자동 재생"><span class="pi">▶</span><span id="playLbl">자동 재생</span></button>
+      <button class="nav side" id="nextBtn" type="button" aria-label="다음 지점">▶</button>
+    </div>
+    <div class="slider">
+      <span class="t" id="sliderCur">1</span>
+      <input id="slider" type="range" min="0" max="25" step="1" value="0" aria-label="여정 타임라인" />
+      <span class="t" id="sliderMax">26</span>
+    </div>
+  </div>
+</section>
+
+<div id="toc" role="dialog" aria-modal="true" aria-label="전체 목차">
+  <div class="tocpanel">
+    <div class="tochead">
+      <h2>전체 여정 <small id="tocSub">26개 지점 · 탄생 → 승천</small></h2>
+      <button class="ibtn" id="tocClose" type="button" aria-label="목차 닫기">✕ 닫기</button>
+    </div>
+    <div class="toclist" id="tocList"></div>
+  </div>
+</div>
+
+<div id="err"></div>
+
+<div id="splash">
+  <div class="spin">
+    <div class="cross">✝</div>
+    <p id="splashMsg">3D 지형을 불러오는 중…</p>
+  </div>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* =========================================================
+     1. 여정 데이터 — 나이·시간순 26개 지점
+     via: 지도 위 경로선이 실제 지형을 따라가도록 넣은 경유 좌표 [lat,lng]
+     factor: 직선거리 → 고대 도보 경로 보정 계수
+     ========================================================= */
+  const RAW = [
+    { name:"베들레헴 탄생", english_name:"Bethlehem", age_period:"0세 · 탄생",
+      lat:31.7054, lng:35.2024, elevation_m:775, scripture:"누가복음 2:1-7",
+      summary:"다윗의 고향 베들레헴의 마구간에서 탄생하셨고, 목자들에게 천사가 나타나 구원자의 탄생을 알렸습니다.",
+      via:[], factor:1.2 },
+
+    { name:"예루살렘 성전 봉헌", english_name:"Jerusalem Temple", age_period:"생후 40일 · 봉헌",
+      lat:31.7781, lng:35.2354, elevation_m:740, scripture:"누가복음 2:22-38",
+      summary:"모세의 율법대로 첫아들을 주께 드리려 성전에 올라갔고, 시므온과 안나가 이 아기를 메시아로 알아보았습니다.",
+      via:[[31.7320,35.2110],[31.7580,35.2250]], factor:1.18 },
+
+    { name:"애굽 피신", english_name:"Matariya, Egypt", age_period:"약 1세 · 애굽 피신",
+      lat:30.1219, lng:31.3055, elevation_m:20, scripture:"마태복음 2:13-15",
+      summary:"헤롯의 유아 학살을 피해 요셉과 마리아가 아기를 데리고 애굽으로 내려갔습니다. 전승은 카이로 마타리야를 그 거처로 전합니다.",
+      via:[[31.5300,35.1000],[31.2500,34.7900],[31.2000,34.2500],[31.0500,32.9000],[30.6000,32.3000]], factor:1.2 },
+
+    { name:"나사렛 정착", english_name:"Nazareth", age_period:"약 4세 · 나사렛 정착",
+      lat:32.6996, lng:35.3035, elevation_m:350, scripture:"마태복음 2:19-23",
+      summary:"헤롯이 죽은 뒤 갈릴리 나사렛으로 옮겨 사셨고, 이로부터 '나사렛 사람'이라 불리게 되었습니다.",
+      via:[[30.9000,32.5000],[31.3000,34.3000],[31.9000,34.9000],[32.4000,35.2000]], factor:1.15 },
+
+    { name:"예루살렘 성전 (12세)", english_name:"Jerusalem Temple", age_period:"12세 · 유월절",
+      lat:31.7781, lng:35.2354, elevation_m:740, scripture:"누가복음 2:41-52",
+      summary:"유월절에 가족과 함께 예루살렘에 올라가셨고, 사흘 뒤 성전에서 율법 선생들과 문답하시는 소년을 부모가 찾았습니다.",
+      via:[[32.0000,35.2500],[31.8800,35.2200]], factor:1.18 },
+
+    { name:"요단강 세례터", english_name:"Qasr al-Yahud", age_period:"약 30세 · 공생애 시작",
+      lat:31.8381, lng:35.5354, elevation_m:-390, scripture:"마태복음 3:13-17",
+      summary:"세례 요한에게 요단강에서 세례를 받으셨고, 성령이 비둘기처럼 내리며 '내 사랑하는 아들'이라는 소리가 들렸습니다.",
+      via:[[31.8500,35.4400],[31.8450,35.5000]], factor:1.25 },
+
+    { name:"유대 광야 시험산", english_name:"Mount of Temptation", age_period:"약 30세 · 40일 시험",
+      lat:31.8744, lng:35.4340, elevation_m:350, scripture:"마태복음 4:1-11",
+      summary:"성령에 이끌려 광야로 나가 40일을 금식하며 시험을 받으셨으나, 말씀으로 물리치고 갈릴리로 돌아가셨습니다.",
+      via:[[31.8600,35.4800]], factor:1.15 },
+
+    { name:"가나 혼인잔치", english_name:"Cana", age_period:"약 30세 · 첫 표적",
+      lat:32.7481, lng:35.3392, elevation_m:200, scripture:"요한복음 2:1-11",
+      summary:"혼인잔치에서 물을 포도주로 바꾸신 첫 표적을 보이셨고, 제자들이 그를 믿기 시작했습니다.",
+      via:[[32.7200,35.4200]], factor:1.2 },
+
+    { name:"가버나움", english_name:"Capernaum", age_period:"약 30~31세 · 갈릴리 사역 거점",
+      lat:32.8808, lng:35.5750, elevation_m:-200, scripture:"마태복음 4:13-17",
+      summary:"나사렛을 떠나 가버나움에 사시며 '회개하라 천국이 가까이 왔다'고 선포하시고, 어부 제자들을 부르셨습니다.",
+      via:[[32.8000,35.4500],[32.8500,35.5200]], factor:1.2 },
+
+    { name:"팔복산", english_name:"Mount of Beatitudes", age_period:"약 31세 · 산상수훈",
+      lat:32.8808, lng:35.5560, elevation_m:-60, scripture:"마태복음 5:1-12",
+      summary:"무리에게 팔복을 선언하시고 소금과 빛, 원수 사랑, 주기도문으로 하나님 나라의 삶을 가르치셨습니다.",
+      via:[], factor:1.3 },
+
+    { name:"막달라·게네사렛", english_name:"Magdala", age_period:"약 31세 · 갈릴리 횡단",
+      lat:32.8395, lng:35.5190, elevation_m:-200, scripture:"마태복음 15:39",
+      summary:"배를 타고 호수를 건너 막달라 지경에 이르셨고, 바리새인들의 표적 요구를 물리치고 떡과 누룩을 두고 가르치셨습니다.",
+      via:[[32.8600,35.5450]], factor:1.25 },
+
+    { name:"거라사·쿠르시", english_name:"Kursi (Gergesa)", age_period:"약 31세 · 데가볼리",
+      lat:32.8138, lng:35.6470, elevation_m:-195, scripture:"마가복음 5:1-20",
+      summary:"호수 동편 데가볼리 땅에서 군대 귀신 들린 자를 고치셨고, 그 사람은 열 마을에 큰 일을 전파했습니다.",
+      via:[[32.8350,35.5900]], factor:1.2 },
+
+    { name:"나인성", english_name:"Nain", age_period:"약 31세 · 소생 기적",
+      lat:32.7278, lng:35.3486, elevation_m:230, scripture:"누가복음 7:11-17",
+      summary:"과부의 외아들이 장사 지나가는 성문 앞에서 관을 멈추게 하시고 청년을 살리셨습니다.",
+      via:[[32.7800,35.5900],[32.7100,35.4500]], factor:1.2 },
+
+    { name:"벳새다 (오병이어)", english_name:"Bethsaida", age_period:"약 31세 · 오병이어",
+      lat:32.9091, lng:35.6292, elevation_m:-160, scripture:"요한복음 6:1-14",
+      summary:"빵 다섯 개와 물고기 두 마리로 남자만 오천 명을 먹이신 표적이 이 부근에서 일어났습니다.",
+      via:[[32.8800,35.6000]], factor:1.25 },
+
+    { name:"두로·시돈 지방", english_name:"Tyre and Sidon", age_period:"약 32세 · 이방 지역",
+      lat:33.2705, lng:35.2035, elevation_m:10, scripture:"마태복음 15:21-28",
+      summary:"이방 땅 두로·시돈으로 가셔서, 딸의 고침을 구하는 가나안 여인의 큰 믿음을 보시고 그대로 이루어 주셨습니다.",
+      via:[[32.9700,35.5000],[33.1200,35.3200],[33.2200,35.2500]], factor:1.25 },
+
+    { name:"가이사랴 빌립보", english_name:"Caesarea Philippi", age_period:"약 32세 · 베드로의 고백",
+      lat:33.2485, lng:35.6944, elevation_m:340, scripture:"마태복음 16:13-20",
+      summary:"'너는 그리스도시오 살아 계신 하나님의 아들입니다'라는 베드로의 고백 위에 교회를 세우시겠다고 하셨습니다.",
+      via:[[33.2000,35.5500],[33.2300,35.6300]], factor:1.2 },
+
+    { name:"다볼산 (변화산)", english_name:"Mount Tabor", age_period:"약 32세 · 변화산",
+      lat:32.6865, lng:35.3905, elevation_m:575, scripture:"마태복음 17:1-8",
+      summary:"베드로·야고보·요한 앞에서 얼굴이 해같이 변하고 옷이 빛나셨으며, 모세와 엘리야가 함께 나타났습니다.",
+      via:[[33.0000,35.5500],[32.8000,35.4500]], factor:1.2 },
+
+    { name:"사마리아 수가성", english_name:"Sychar (Jacob's Well)", age_period:"약 32세 · 사마리아",
+      lat:32.2122, lng:35.2853, elevation_m:525, scripture:"요한복음 4:1-26",
+      summary:"야곱의 우물가에서 사마리아 여인에게 영생수를 말씀하셨고, 그를 통해 온 성이 예수를 믿게 되었습니다.",
+      via:[[32.5000,35.3200],[32.3500,35.3000]], factor:1.2 },
+
+    { name:"여리고", english_name:"Jericho", age_period:"약 33세 · 고난주간 전",
+      lat:31.8703, lng:35.4439, elevation_m:-258, scripture:"누가복음 19:1-10",
+      summary:"삭개오를 불러 '오늘 네 집에 유하여야 하겠다' 하셨고, 길가의 눈 먼 바디매오를 고쳐 주셨습니다.",
+      via:[[31.9500,35.4000],[31.9000,35.4300]], factor:1.25 },
+
+    { name:"베다니 (나사로)", english_name:"Bethany", age_period:"약 33세 · 나사로 부활",
+      lat:31.7715, lng:35.2620, elevation_m:570, scripture:"요한복음 11:1-44",
+      summary:"나사로를 무덤에서 살리시고, 마르다의 고백과 마리아의 향유로 사랑을 받으셨습니다.",
+      via:[[31.8200,35.3500],[31.7900,35.2900]], factor:1.25 },
+
+    { name:"예루살렘 다락방", english_name:"Upper Room, Jerusalem", age_period:"약 33세 · 최후의 만찬",
+      lat:31.7715, lng:35.2290, elevation_m:765, scripture:"누가복음 22:7-20",
+      summary:"제자들과 마지막 만찬을 나누시며 떡과 잔으로 자기 몸과 피를 주시고 새 언약을 세우셨습니다.",
+      via:[], factor:1.35 },
+
+    { name:"겟세마네 동산", english_name:"Gethsemane", age_period:"약 33세 · 고난주간",
+      lat:31.7794, lng:35.2396, elevation_m:730, scripture:"마태복음 26:36-56",
+      summary:"땀방울이 피 같을 만큼 기도하셨고, 유다의 배신 속에서도 제자들을 지키시며 체포되심을 받아들이셨습니다.",
+      via:[], factor:1.4 },
+
+    { name:"골고다·성묘교회", english_name:"Golgotha", age_period:"약 33세 · 십자가",
+      lat:31.7784, lng:35.2298, elevation_m:760, scripture:"요한복음 19:17-30",
+      summary:"십자가에 달려 '다 이루었다' 말씀하시고 운명하셨으며, 제3일 아침 빈 무덤에서 부활하셨습니다.",
+      via:[], factor:1.45 },
+
+    { name:"엠마오", english_name:"Emmaus (Imwas)", age_period:"부활 후 · 두 제자",
+      lat:31.8389, lng:34.9896, elevation_m:220, scripture:"누가복음 24:13-35",
+      summary:"부활하신 예수가 두 제자와 함께 걸으시며 성경을 풀어 주셨고, 떡을 떼실 때 그들이 알아보았습니다.",
+      via:[[31.8000,35.1600],[31.8300,35.0500]], factor:1.2 },
+
+    { name:"디베랴 바닷가", english_name:"Sea of Galilee", age_period:"부활 후 · 갈릴리",
+      lat:32.8800, lng:35.5450, elevation_m:-210, scripture:"요한복음 21:1-14",
+      summary:"갈릴리 호숫가에서 제자들에게 나타나 많은 물고기를 잡게 하시고, 숯불에 생선과 떡을 준비해 주셨습니다.",
+      via:[[32.2000,35.3000],[32.6000,35.4200],[32.8200,35.5000]], factor:1.2 },
+
+    { name:"감람산 승천", english_name:"Mount of Olives", age_period:"부활 40일 후 · 승천",
+      lat:31.7788, lng:35.2455, elevation_m:800, scripture:"사도행전 1:9-12",
+      summary:"베다니 앞 감람산에서 부활과 성령의 약속을 가르치신 뒤, 제자들이 보는 앞에서 하늘로 올라가셨습니다.",
+      via:[[32.1000,35.3000],[31.8300,35.2600]], factor:1.2 }
+  ];
+
+  const N = RAW.length;
+  const P = RAW.map((p,i)=>Object.assign({}, p, {order:i+1}));
+
+  /* =========================================================
+     2. 거리 · 고도 · 도보 시간 계산
+     ========================================================= */
+  const R = 6371.0088;
+  const rad = d => d*Math.PI/180;
+
+  function haversine(lat1,lng1,lat2,lng2){
+    const dLat = rad(lat2-lat1), dLng = rad(lng2-lng1);
+    const a = Math.sin(dLat/2)**2 + Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLng/2)**2;
+    return 2*R*Math.asin(Math.min(1,Math.sqrt(a)));
+  }
+
+  // 각 지점까지의 경로 좌표열 [lat,lng]
+  function coordsTo(i){
+    const p = P[i];
+    const out = [];
+    if(i>0) out.push([P[i-1].lat, P[i-1].lng]);
+    (p.via||[]).forEach(v=>out.push(v));
+    out.push([p.lat, p.lng]);
+    return out;
+  }
+
+  const legs = P.map((p,i)=>{
+    if(i===0) return {km:0, ascent:0, descent:0, hours:0, days:0, cum:0};
+    const cs = coordsTo(i);
+    let d = 0;
+    for(let k=1;k<cs.length;k++) d += haversine(cs[k-1][0],cs[k-1][1],cs[k][0],cs[k][1]);
+    const km = d * (p.factor || 1.18);
+    const diff = p.elevation_m - P[i-1].elevation_m;
+    const ascent = Math.max(0,diff), descent = Math.max(0,-diff);
+    // 토블러·나이즈미스 근사: 평지 4km/h + 오르막 100m당 10분
+    const hours = km/4 + ascent/100*(10/60);
+    const days = Math.max(1, Math.ceil(km/30));
+    return {km, ascent, descent, hours, days, cum:0};
+  });
+  let cum = 0;
+  legs.forEach((l,i)=>{ cum += l.km; l.cum = cum; });
+  const TOTAL_KM = cum;
+  const TOTAL_ELEV_GAIN = legs.reduce((s,l)=>s+l.ascent,0);
+
+  function fmtKm(km){
+    if(km < 1) return Math.round(km*1000)+" m";
+    return (km<100 ? km.toFixed(1) : Math.round(km).toLocaleString("ko-KR"))+" km";
+  }
+  function fmtDur(h){
+    if(h<=0) return "–";
+    const hh = Math.floor(h), mm = Math.round((h-hh)*60);
+    if(hh===0) return mm+"분";
+    if(mm===0) return hh+"시간";
+    return hh+"시간 "+mm+"분";
+  }
+  function fmtElev(v){
+    const s = Math.round(v);
+    return (s>0?"+":"") + s.toLocaleString("ko-KR") + " m";
+  }
+
+  /* =========================================================
+     3. 지도 초기화
+     ========================================================= */
+  const SAT = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+  const OSM = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+
+  let map, markers=[], cur=0, playing=false, playTimer=null, styleMode="sat";
+
+  const el = id => document.getElementById(id);
+
+  function showError(msg){
+    const e = el("err");
+    e.style.display = "block";
+    e.textContent = msg;
+  }
+
+  if(!window.maplibregl){
+    el("splashMsg").textContent = "지도를 불러오지 못했습니다. 네트워크를 확인해 주세요.";
+    showError("MapLibre GL JS를 불러오지 못했습니다. (CDN 차단 또는 오프라인)");
+    return;
+  }
+
+  try{
+    map = new maplibregl.Map({
+      container:"map",
+      style:{
+        version:8,
+        sources:{
+          sat:{type:"raster", tiles:[SAT], tileSize:256, maxzoom:19, attribution:"Esri · Maxar · Earthstar Geographics"},
+          topo:{type:"raster", tiles:[OSM], tileSize:256, maxzoom:19, attribution:"© OpenStreetMap contributors"}
+        },
+        layers:[
+          {id:"sat", type:"raster", source:"sat", paint:{"raster-saturation":-0.12,"raster-brightness-min":0.03,"raster-contrast":0.06}},
+          {id:"topo", type:"raster", source:"topo", layout:{visibility:"none"}}
+        ]
+      },
+      center:[35.35, 31.80],
+      zoom:7.35,
+      pitch:52,
+      bearing:-8,
+      maxPitch:82,
+      antialias:true,
+      attributionControl:false,
+      fadeDuration:180
+    });
+  }catch(e){
+    showError("지도를 초기화하지 못했습니다. ("+e.message+")");
+    return;
+  }
+
+  map.addControl(new maplibregl.NavigationControl({visualizePitch:true}), "bottom-right");
+  map.addControl(new maplibregl.AttributionControl({compact:true}), "bottom-right");
+
+  map.on("error", function(ev){
+    if(ev && ev.error && /Failed to fetch|NetworkError/i.test(String(ev.error.message))){
+      console.warn("tile fetch issue:", ev.error.message);
+    }
+  });
+
+  const routeAll = {type:"FeatureCollection", features:[]};
+  const routeDone = {type:"FeatureCollection", features:[]};
+  const routeLast = {type:"FeatureCollection", features:[]};
+
+  function lngLat(c){ return [c[1], c[0]]; }
+  function pathCoords(from,to){
+    const out = [];
+    for(let i=from;i<=to;i++){
+      const cs = coordsTo(i);
+      cs.forEach((c,k)=>{ if(out.length && k===0) return; out.push(lngLat(c)); });
+    }
+    return out;
+  }
+
+  map.on("load", function(){
+    // 지형 (DEM)
+    map.addSource("dem", {
+      type:"raster-dem",
+      tiles:["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
+      encoding:"terrarium",
+      tileSize:256,
+      maxzoom:13,
+      attribution:"DEM: AWS Terrain Tiles (SRTM)"
+    });
+    map.setTerrain({source:"dem", exaggeration:1.8});
+
+    // 능선 음영 — 위성영상 위에 입체감
+    map.addLayer({
+      id:"hillshade",
+      type:"hillshade",
+      source:"dem",
+      paint:{
+        "hillshade-exaggeration":0.4,
+        "hillshade-shadow-color":"#06121a",
+        "hillshade-highlight-color":"#f7e7c4",
+        "hillshade-accent-color":"#2a4a55"
+      }
+    });
+
+    try{
+      if(map.setFog) map.setFog({
+        "color":"#0d2430",
+        "high-color":"#123243",
+        "horizon-blend":0.22,
+        "space-color":"#050c12",
+        "star-intensity":0.06
+      });
+    }catch(e){ /* older renderer */ }
+
+    // 경로 소스·레이어
+    map.addSource("route-all", {type:"geojson", data:routeAll});
+    map.addSource("route-done", {type:"geojson", data:routeDone});
+    map.addSource("route-last", {type:"geojson", data:routeLast});
+
+    map.addLayer({
+      id:"route-all-casing", type:"line", source:"route-all",
+      layout:{"line-join":"round","line-cap":"round"},
+      paint:{"line-color":"#04121a","line-width":5,"line-opacity":0.5,"line-blur":2}
+    });
+    map.addLayer({
+      id:"route-all", type:"line", source:"route-all",
+      layout:{"line-join":"round","line-cap":"round"},
+      paint:{"line-color":"#d9b071","line-width":1.8,"line-opacity":0.55,"line-dasharray":[2,1.6]}
+    });
+    map.addLayer({
+      id:"route-done-glow", type:"line", source:"route-done",
+      layout:{"line-join":"round","line-cap":"round"},
+      paint:{"line-color":"#f4cf8c","line-width":11,"line-opacity":0.18,"line-blur":9}
+    });
+    map.addLayer({
+      id:"route-done", type:"line", source:"route-done",
+      layout:{"line-join":"round","line-cap":"round"},
+      paint:{"line-color":"#f2cd8b","line-width":3,"line-opacity":0.95}
+    });
+    map.addLayer({
+      id:"route-last-glow", type:"line", source:"route-last",
+      layout:{"line-join":"round","line-cap":"round"},
+      paint:{"line-color":"#ffb877","line-width":16,"line-opacity":0.22,"line-blur":12}
+    });
+    map.addLayer({
+      id:"route-last", type:"line", source:"route-last",
+      layout:{"line-join":"round","line-cap":"round"},
+      paint:{"line-color":"#ffc98d","line-width":4.4,"line-opacity":1}
+    });
+
+    // 지점 마커
+    P.forEach((p,i)=>{
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "mk";
+      b.innerHTML = '<span class="num">'+(i+1)+'</span><span class="lbl">'+escapeHtml(p.name)+'</span>';
+      b.setAttribute("aria-label", (i+1)+"번 "+p.name+" ("+p.age_period+")");
+      b.addEventListener("click", function(ev){ ev.stopPropagation(); go(i,{user:true}); });
+      const m = new maplibregl.Marker({element:b, anchor:"center"}).setLngLat([p.lng,p.lat]).addTo(map);
+      markers.push({el:b, marker:m});
+    });
+
+    drawRoutes(0);
+    hideSplash();
+    // 초기 지점으로 이동 (해시 지원)
+    const h = parseInt((location.hash||"").replace("#",""),10);
+    go(Number.isFinite(h) && h>=1 && h<=N ? h-1 : 0, {instant:true});
+  });
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  function lineFeature(coords){
+    return {type:"Feature", properties:{}, geometry:{type:"LineString", coordinates:coords}};
+  }
+
+  function drawRoutes(i){
+    routeAll.features = [lineFeature(pathCoords(0,N-1))];
+    const doneCoords = i>0 ? pathCoords(0,i) : [];
+    routeDone.features = doneCoords.length>1 ? [lineFeature(doneCoords)] : [];
+    let lastCoords = [];
+    if(i>0) lastCoords = coordsTo(i).map(lngLat);
+    routeLast.features = lastCoords.length>1 ? [lineFeature(lastCoords)] : [];
+    if(map.getSource("route-all")) map.getSource("route-all").setData(routeAll);
+    if(map.getSource("route-done")) map.getSource("route-done").setData(routeDone);
+    if(map.getSource("route-last")) map.getSource("route-last").setData(routeLast);
+  }
+
+  /* =========================================================
+     4. 카메라 · 상태 전환
+     ========================================================= */
+  function bearingTo(a,b){
+    const φ1 = rad(a.lat), φ2 = rad(b.lat), Δλ = rad(b.lng-a.lng);
+    const y = Math.sin(Δλ)*Math.cos(φ2);
+    const x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+    return (Math.atan2(y,x)*180/Math.PI + 360) % 360;
+  }
+
+  function cardHeight(){
+    const c = el("card");
+    return c ? c.getBoundingClientRect().height : 0;
+  }
+
+  function flyToPoint(i, instant){
+    const p = P[i];
+    const prev = i>0 ? P[i-1] : null;
+    let bearing = map.getBearing();
+    if(prev) bearing = bearingTo(prev,p);
+    const km = legs[i].km;
+    let zoom = 11.2;
+    if(km > 200) zoom = 6.9;
+    else if(km > 90) zoom = 7.8;
+    else if(km > 40) zoom = 8.8;
+    else if(km > 15) zoom = 10.2;
+    else if(km > 5) zoom = 11.6;
+    else zoom = 12.6;
+
+    const isMobile = window.innerWidth < 900;
+    const pad = isMobile
+      ? {bottom: Math.min(cardHeight()+18, window.innerHeight*0.66), top: 76, left: 0, right: 0}
+      : {bottom: 40, top: 92, left: 480, right: 20};
+
+    const opts = {
+      center:[p.lng, p.lat],
+      zoom: zoom,
+      pitch: i===0 ? 55 : 62,
+      bearing: bearing,
+      padding: pad,
+      essential:true,
+      duration: instant ? 0 : 2100,
+      curve: 1.42
+    };
+    if(instant){ map.jumpTo({center:opts.center, zoom:opts.zoom, pitch:opts.pitch, bearing:opts.bearing, padding:pad}); }
+    else { map.flyTo(opts); }
+  }
+
+  function go(i, opt){
+    opt = opt || {};
+    i = Math.max(0, Math.min(N-1, i));
+    cur = i;
+    render();
+    drawRoutes(i);
+    flyToPoint(i, !!opt.instant);
+    if(location.hash !== "#"+(i+1)){
+      history.replaceState(null,"","#"+(i+1));
+    }
+    if(opt.user) stopPlay();
+  }
+
+  function render(){
+    const p = P[cur], l = legs[cur];
+    el("cRank").textContent = String(cur+1).padStart(2,"0")+" / "+N;
+    el("cName").textContent = p.name;
+    el("cEn").textContent = p.english_name;
+    el("cAge").textContent = p.age_period;
+    el("ageBadge").textContent = p.age_period;
+    el("cLat").textContent = p.lat.toFixed(4)+"° N";
+    el("cLng").textContent = p.lng.toFixed(4)+"° E";
+    el("cEle").textContent = Math.round(p.elevation_m).toLocaleString("ko-KR")+" m";
+    el("cScript").textContent = p.scripture;
+    el("cSummary").textContent = p.summary;
+
+    // 구간 지표
+    if(cur===0){
+      el("bKm").textContent = "출발";
+      el("bKmSub").textContent = "여정의 시작점";
+      el("bTot").textContent = "0 km";
+      el("bTotSub").textContent = "누적 없음";
+      el("bEle").textContent = Math.round(p.elevation_m).toLocaleString("ko-KR")+" m";
+      el("bEleSub").textContent = "해발 고도";
+      el("bEleBox").className = "badge flat";
+      el("bTime").textContent = "–";
+      el("bTimeSub").textContent = "이동 없음";
+    }else{
+      el("bKm").textContent = fmtKm(l.km);
+      el("bKmSub").textContent = "보정 ×"+(p.factor||1.18).toFixed(2);
+      el("bTot").textContent = fmtKm(l.cum);
+      el("bTotSub").textContent = "출발지 대비";
+      if(l.ascent>0){
+        el("bEle").textContent = "+"+Math.round(l.ascent).toLocaleString("ko-KR")+" m";
+        el("bEleSub").textContent = "오르막 상승";
+        el("bEleBox").className = "badge up";
+      }else if(l.descent>0){
+        el("bEle").textContent = "−"+Math.round(l.descent).toLocaleString("ko-KR")+" m";
+        el("bEleSub").textContent = "내리막 하강";
+        el("bEleBox").className = "badge down";
+      }else{
+        el("bEle").textContent = "0 m";
+        el("bEleSub").textContent = "고도 변화 없음";
+        el("bEleBox").className = "badge flat";
+      }
+      el("bTime").textContent = fmtDur(l.hours);
+      el("bTimeSub").textContent = "하루 30km 기준 약 "+(l.days===1?"당일":l.days+"일");
+    }
+
+    // 진행률
+    el("card").style.setProperty("--prog", (cur/(N-1)*100).toFixed(2)+"%");
+    el("slider").value = cur;
+    el("slider").style.setProperty("--fill", (cur/(N-1)*100).toFixed(2)+"%");
+    el("sliderCur").textContent = String(cur+1);
+    el("sliderMax").textContent = String(N);
+    el("prevBtn").disabled = cur===0;
+    el("prevBtn").style.opacity = cur===0 ? .35 : 1;
+    el("nextBtn").disabled = cur===N-1;
+    el("nextBtn").style.opacity = cur===N-1 ? .35 : 1;
+
+    // 마커 상태
+    markers.forEach((m,i)=>{
+      const cl = "mk" + (i===cur ? " cur" : (i<cur ? " done" : ""));
+      if(m.el.className !== cl) m.el.className = cl;
+      m.el.style.zIndex = i===cur ? 8 : (i<cur ? 3 : 2);
+    });
+
+    drawProfile();
+    renderTOCState();
+    updateHud();
+  }
+
+  function updateHud(){
+    if(!map) return;
+    const c = map.getCenter();
+    el("hLat").textContent = c.lat.toFixed(4)+"°";
+    el("hLng").textContent = c.lng.toFixed(4)+"°";
+    let e = null;
+    try{ e = map.queryTerrainElevation(c, {exaggerated:false}); }catch(err){}
+    if(e===null || e===undefined || !isFinite(e)) e = P[cur].elevation_m;
+    el("hEle").textContent = Math.round(e).toLocaleString("ko-KR")+" m";
+  }
+  let hudRaf = null;
+  function onMove(){
+    if(hudRaf) return;
+    hudRaf = requestAnimationFrame(()=>{ hudRaf=null; updateHud(); });
+  }
+
+  /* =========================================================
+     5. 고도 프로파일 SVG
+     ========================================================= */
+  const profileEl = el("profile");
+  function drawProfile(){
+    const w = profileEl.clientWidth || 320;
+    const h = profileEl.clientHeight || 104;
+    if(!w) return;
+    const pad = {l:34, r:10, t:12, b:16};
+    const iw = Math.max(20, w-pad.l-pad.r), ih = Math.max(20, h-pad.t-pad.b);
+    const minE = -420, maxE = 860;
+    const X = i => pad.l + (i/(N-1))*iw;
+    const Y = e => pad.t + ih - ((e-minE)/(maxE-minE))*ih;
+    const baseY = pad.t + ih;
+
+    let line = "";
+    P.forEach((p,i)=>{ line += (i?"L":"M") + X(i).toFixed(1) + " " + Y(p.elevation_m).toFixed(1) + " "; });
+    let area = "M"+X(0).toFixed(1)+" "+baseY.toFixed(1)+" ";
+    P.forEach((p,i)=>{ area += "L"+X(i).toFixed(1)+" "+Y(p.elevation_m).toFixed(1)+" "; });
+    area += "L"+X(N-1).toFixed(1)+" "+baseY.toFixed(1)+" Z";
+
+    // 현재 지점까지 채운 영역
+    let doneArea = "M"+X(0).toFixed(1)+" "+baseY.toFixed(1)+" ";
+    for(let i=0;i<=cur;i++) doneArea += "L"+X(i).toFixed(1)+" "+Y(P[i].elevation_m).toFixed(1)+" ";
+    doneArea += "L"+X(cur).toFixed(1)+" "+baseY.toFixed(1)+" Z";
+
+    const y0 = Y(0);
+    const ticks = [800,0,-400].map(v=>
+      '<line x1="'+pad.l+'" x2="'+(w-pad.r)+'" y1="'+Y(v).toFixed(1)+'" y2="'+Y(v).toFixed(1)+'" stroke="rgba(255,255,255,'+(v===0?0.18:0.06)+')" stroke-width="1" stroke-dasharray="'+(v===0?"4 4":"2 5")+'"/>'+
+      '<text x="'+(pad.l-5)+'" y="'+(Y(v)+3.2).toFixed(1)+'" text-anchor="end" font-size="8.5" fill="'+(v===0?"#9fb0c0":"#63758a")+'" font-family="system-ui,sans-serif">'+v+'</text>'
+    ).join("");
+
+    let dots = "";
+    P.forEach((p,i)=>{
+      const isCur = i===cur, isDone = i<cur;
+      const r = isCur ? 4.6 : 2.4;
+      dots += '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(p.elevation_m).toFixed(1)+'" r="'+r+'" fill="'+(isCur?"#ffe6b5":(isDone?"#e3bb74":"rgba(190,203,214,.55)"))+'" stroke="'+(isCur?"#0a1620":"none")+'" stroke-width="'+(isCur?2:0)+'"/>';
+    });
+
+    const cx = X(cur), cy = Y(P[cur].elevation_m);
+    const label = Math.round(P[cur].elevation_m).toLocaleString("ko-KR")+"m";
+    const labelX = Math.min(Math.max(cx, pad.l+16), w-30);
+    const labelY = cy < pad.t+18 ? cy+16 : cy-8;
+
+    profileEl.setAttribute("viewBox","0 0 "+w+" "+h);
+    profileEl.innerHTML =
+      '<defs>'+
+        '<linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">'+
+          '<stop offset="0%" stop-color="#e3bb74" stop-opacity="0.30"/>'+
+          '<stop offset="100%" stop-color="#e3bb74" stop-opacity="0.02"/>'+
+        '</linearGradient>'+
+        '<linearGradient id="pg2" x1="0" y1="0" x2="0" y2="1">'+
+          '<stop offset="0%" stop-color="#ffdd9e" stop-opacity="0.42"/>'+
+          '<stop offset="100%" stop-color="#ffdd9e" stop-opacity="0.04"/>'+
+        '</linearGradient>'+
+      '</defs>'+
+      ticks+
+      '<path d="'+area+'" fill="url(#pg)"/>'+
+      '<path d="'+doneArea+'" fill="url(#pg2)"/>'+
+      '<path d="'+line+'" fill="none" stroke="#a98a54" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>'+
+      '<line x1="'+cx.toFixed(1)+'" x2="'+cx.toFixed(1)+'" y1="'+pad.t+'" y2="'+baseY+'" stroke="rgba(255,220,160,.35)" stroke-width="1" stroke-dasharray="2 3"/>'+
+      dots+
+      '<text x="'+labelX.toFixed(1)+'" y="'+labelY.toFixed(1)+'" text-anchor="middle" font-size="9" font-weight="700" fill="#ffe6b5" font-family="system-ui,sans-serif">'+label+'</text>';
+  }
+
+  profileEl.addEventListener("click", function(ev){
+    const r = profileEl.getBoundingClientRect();
+    const pad = {l:34, r:10};
+    const iw = Math.max(20, r.width-pad.l-pad.r);
+    const x = ev.clientX - r.left - pad.l;
+    const i = Math.round(Math.max(0,Math.min(1, x/iw)) * (N-1));
+    go(i, {user:true});
+  });
+
+  /* =========================================================
+     6. 컨트롤 · 목차 · 스타일
+     ========================================================= */
+  el("prevBtn").addEventListener("click", ()=>go(cur-1,{user:true}));
+  el("nextBtn").addEventListener("click", ()=>go(cur+1,{user:true}));
+  el("slider").addEventListener("input", function(ev){ go(parseInt(ev.target.value,10),{user:true}); });
+
+  el("playBtn").addEventListener("click", function(){
+    if(playing) stopPlay(); else startPlay();
+  });
+
+  function startPlay(){
+    if(cur >= N-1) go(0,{instant:false});
+    playing = true;
+    el("playBtn").classList.add("on");
+    el("playLbl").textContent = "일시정지";
+    el("playBtn").querySelector(".pi").textContent = "❚❚";
+    clearInterval(playTimer);
+    playTimer = setInterval(()=>{
+      if(cur >= N-1){ stopPlay(); return; }
+      go(cur+1);
+    }, 4600);
+  }
+  function stopPlay(){
+    playing = false;
+    clearInterval(playTimer); playTimer = null;
+    el("playBtn").classList.remove("on");
+    el("playLbl").textContent = "자동 재생";
+    el("playBtn").querySelector(".pi").textContent = "▶";
+  }
+
+  // 목차
+  const tocList = el("tocList");
+  P.forEach((p,i)=>{
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "tocrow";
+    b.dataset.i = i;
+    b.innerHTML = '<span class="n">'+(i+1)+'</span>'+
+      '<span class="txt"><span class="nm">'+escapeHtml(p.name)+'</span><span class="ag">'+escapeHtml(p.age_period)+'</span></span>'+
+      '<span class="km">'+(i===0?"출발":fmtKm(legs[i].km))+'</span>';
+    b.addEventListener("click", ()=>{ go(i,{user:true}); closeTOC(); });
+    tocList.appendChild(b);
+  });
+  el("tocSub").textContent = N+"개 지점 · 탄생 → 승천 · 누적 "+fmtKm(TOTAL_KM);
+
+  function renderTOCState(){
+    Array.prototype.forEach.call(tocList.children, (c,i)=>{
+      c.classList.toggle("cur", i===cur);
+    });
+  }
+  function openTOC(){ el("toc").classList.add("open"); }
+  function closeTOC(){ el("toc").classList.remove("open"); }
+  el("tocBtn").addEventListener("click", openTOC);
+  el("tocClose").addEventListener("click", closeTOC);
+  el("toc").addEventListener("click", function(ev){ if(ev.target === el("toc")) closeTOC(); });
+
+  // 스타일 전환
+  const styleBtn = el("styleBtn");
+  styleBtn.addEventListener("click", function(){
+    if(!map || !map.getLayer("topo")) return;
+    styleMode = styleMode === "sat" ? "topo" : "sat";
+    map.setLayoutProperty("sat","visibility", styleMode==="sat"?"visible":"none");
+    map.setLayoutProperty("topo","visibility", styleMode==="topo"?"visible":"none");
+    if(map.getLayer("hillshade")){
+      map.setPaintProperty("hillshade","hillshade-exaggeration", styleMode==="sat"?0.4:0.18);
+    }
+    styleBtn.querySelector(".ico").textContent = styleMode==="sat" ? "🛰" : "🗺";
+    el("styleLbl").textContent = styleMode==="sat" ? "위성" : "지형";
+  });
+
+  // 키보드
+  document.addEventListener("keydown", function(ev){
+    if(ev.key === "ArrowRight"){ go(cur+1,{user:true}); }
+    else if(ev.key === "ArrowLeft"){ go(cur-1,{user:true}); }
+    else if(ev.key === " "){ ev.preventDefault(); playing?stopPlay():startPlay(); }
+    else if(ev.key === "Escape"){ closeTOC(); }
+  });
+
+  map.on("move", onMove);
+  map.on("moveend", onMove);
+  map.on("pitch", onMove);
+
+  let rzT = null;
+  window.addEventListener("resize", function(){
+    clearTimeout(rzT);
+    rzT = setTimeout(()=>{ drawProfile(); positionAttrib(); }, 180);
+  });
+
+  function positionAttrib(){
+    const ctrl = document.querySelector(".maplibregl-ctrl-bottom-right");
+    if(!ctrl) return;
+    if(window.innerWidth < 900){
+      ctrl.style.bottom = (cardHeight()+6)+"px";
+    }else{
+      ctrl.style.bottom = "6px";
+    }
+  }
+
+  function hideSplash(){
+    positionAttrib();
+    setTimeout(()=>{
+      el("splash").classList.add("hide");
+      el("splashMsg").textContent = "";
+    }, 260);
+  }
+
+  // 첫 렌더(지도 로드 전에도 카드가 채워지도록)
+  render();
+
+  // 지도 로드가 4초 내 끝나지 않으면 안내
+  setTimeout(function(){
+    if(el("splash") && !el("splash").classList.contains("hide")){
+      el("splashMsg").textContent = "3D 지형 타일을 받는 중입니다…";
+    }
+  }, 4200);
+
+})();
+</script>
+</body>
+</html>
