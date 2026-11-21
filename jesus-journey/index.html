@@ -1192,13 +1192,7 @@
     const zx = Math.log2(availW*0.92*360/(512*(maxLng-minLng)));
     const zy = Math.log2(availH*0.86*360*cosLat/(512*(maxLat-minLat)));
     const z = Math.min(zx, zy, 8.4);
-    const worldPx = 512*Math.pow(2,z);
-    const cx = pad.left + availW/2, cy = pad.top + availH/2;
-    const lngCam = midLng - (cx - W/2)*360/worldPx;
-    const K = worldPx/(2*Math.PI);
-    const mY = t => Math.log(Math.tan(Math.PI/4 + rad(t)/2));
-    const latCam = (2*Math.atan(Math.exp(mY(midLat) - (H/2 - cy)/K)) - Math.PI/2)*180/Math.PI;
-    return {center:[lngCam, latCam], zoom:z, pitch: isMobile?16:22, bearing:0, padding:pad};
+    return {center:[midLng, midLat], zoom:z, pitch: isMobile?16:22, bearing:0, padding:pad};
   }
 
   el("ovBtn").addEventListener("click", function(){
