@@ -130,8 +130,8 @@
     border-radius:2px;transition:width .5s ease;box-shadow:0 0 12px rgba(227,187,116,.6)
   }
   .grip{width:38px;height:3px;border-radius:3px;background:rgba(227,187,116,.28);margin:7px auto 0;flex:0 0 auto}
-  .cbody{overflow-y:auto;overscroll-behavior:contain;padding:6px 14px 2px;flex:1 1 auto;-webkit-overflow-scrolling:touch}
-  .chead{display:flex;align-items:flex-start;gap:8px;margin-top:2px}
+  .cbody{overflow-y:auto;overscroll-behavior:contain;padding:0 14px 2px;flex:1 1 auto;-webkit-overflow-scrolling:touch}
+  .chead{display:flex;align-items:flex-start;gap:8px;padding:4px 14px 7px}
   .rank{
     font-size:10px;font-weight:700;color:var(--gold);
     border:1px solid rgba(227,187,116,.4);border-radius:7px;
@@ -139,6 +139,15 @@
   }
   .names{min-width:0;flex:1}
   .cname{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+  .fold{
+    appearance:none;cursor:pointer;flex:0 0 auto;
+    width:26px;height:26px;border-radius:8px;margin-top:1px;
+    border:1px solid rgba(227,187,116,.3);background:rgba(255,255,255,.05);
+    color:var(--gold);font-size:11px;line-height:1;display:grid;place-items:center
+  }
+  #card.compact .cbody{display:none}
+  #card.compact{max-height:none}
+  #card.compact .ctl{padding-top:2px}
   .cen{margin:1px 0 0;font-size:10.5px;color:var(--ink-faint);letter-spacing:.06em;text-transform:uppercase}
   .cage{
     flex:0 0 auto;font-size:10.5px;font-weight:600;color:var(--gold-hi);
@@ -334,7 +343,8 @@
       border:1px solid rgba(227,187,116,.32);
       box-shadow:0 24px 60px rgba(0,0,0,.55)
     }
-    .cbody{padding:8px 18px 4px}
+    .cbody{padding:0 18px 4px}
+    .chead{padding:6px 18px 8px}
     .ctl{padding:10px 18px 14px}
     .cname{font-size:19px}
     .summary{font-size:13px}
@@ -391,15 +401,16 @@
 
 <section id="card" aria-label="현재 지점 정보">
   <div class="grip"></div>
-  <div class="cbody">
-    <div class="chead">
-      <span class="rank" id="cRank">01 / 26</span>
-      <div class="names">
-        <h2 class="cname" id="cName">베들레헴 탄생</h2>
-        <p class="cen" id="cEn">Bethlehem</p>
-      </div>
-      <span class="cage" id="cAge">0세 · 탄생</span>
+  <div class="chead">
+    <span class="rank" id="cRank">01 / 26</span>
+    <div class="names">
+      <h2 class="cname" id="cName">베들레헴 탄생</h2>
+      <p class="cen" id="cEn">Bethlehem</p>
     </div>
+    <span class="cage" id="cAge">0세 · 탄생</span>
+    <button class="fold" id="foldBtn" type="button" aria-label="카드 접기">▴</button>
+  </div>
+  <div class="cbody">
 
     <div class="meta">
       <span><span class="lab">위도</span> <b class="n" id="cLat">–</b></span>
@@ -918,7 +929,10 @@
     if(location.hash !== "#"+(i+1)){
       history.replaceState(null,"","#"+(i+1));
     }
-    if(opt.user) stopPlay();
+    if(opt.user){
+      stopPlay();
+      if(window.innerWidth < 900 && isFolded()) setFold(false);
+    }
   }
 
   function render(){
@@ -1110,6 +1124,17 @@
   el("nextBtn").addEventListener("click", ()=>go(cur+1,{user:true}));
   el("slider").addEventListener("input", function(ev){ go(parseInt(ev.target.value,10),{user:true}); });
 
+  // 카드 접기/펼치기
+  function setFold(compact){
+    el("card").classList.toggle("compact", !!compact);
+    el("foldBtn").textContent = compact ? "▴" : "▾";
+    el("foldBtn").setAttribute("aria-label", compact ? "카드 펼치기" : "카드 접기");
+    setTimeout(positionAttrib, 30);
+  }
+  function isFolded(){ return el("card").classList.contains("compact"); }
+  el("foldBtn").addEventListener("click", function(){ setFold(!isFolded()); });
+  el("card").querySelector(".grip").addEventListener("click", function(){ setFold(!isFolded()); });
+
   el("playBtn").addEventListener("click", function(){
     if(playing) stopPlay(); else startPlay();
   });
@@ -1180,7 +1205,7 @@
     const isMobile = W < 900;
     const ch = cardHeight();
     const pad = isMobile
-      ? {top:68, bottom: Math.min(ch, H*0.58)+14, left:8, right:8}
+      ? {top:68, bottom: (isFolded()? 190 : Math.min(ch, H*0.58)+14), left:8, right:8}
       : {top:92, bottom:48, left:466, right:36};
     const lats = P.map(p=>p.lat), lngs = P.map(p=>p.lng);
     const minLat = Math.min.apply(null,lats), maxLat = Math.max.apply(null,lats);
@@ -1197,6 +1222,7 @@
 
   el("ovBtn").addEventListener("click", function(){
     stopPlay();
+    if(window.innerWidth < 900) setFold(true);
     const cam = overviewCamera();
     map.flyTo({
       center: cam.center,
