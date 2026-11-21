@@ -948,8 +948,28 @@
       duration: instant ? 0 : 1900,
       curve: 1.42
     };
-    if(instant){ map.jumpTo({center:opts.center, zoom:opts.zoom, pitch:opts.pitch, bearing:opts.bearing, padding:pad}); }
-    else { map.flyTo(opts); }
+    if(instant){
+      map.jumpTo({center:opts.center, zoom:opts.zoom, pitch:opts.pitch, bearing:opts.bearing, padding:pad});
+      setTimeout(function(){ alignTarget(i); }, 120);
+    }else{
+      map.flyTo(opts);
+      map.once("moveend", function(){ setTimeout(function(){ alignTarget(i); }, 90); });
+    }
+  }
+
+  // 선택 지점이 카드에 가리거나 화면 아래로 내려가지 않도록 한 번만 보정
+  function alignTarget(i){
+    const mk = markers[i];
+    if(!mk || map.isMoving()) return;
+    const r = mk.el.getBoundingClientRect();
+    const y = r.top + r.height/2;
+    const isMobile = window.innerWidth < 900;
+    const cardTop = el("card").getBoundingClientRect().top;
+    const limit = isMobile ? cardTop - 80 : window.innerHeight * 0.62;
+    if(y > limit){
+      const d = Math.min(y - limit, window.innerHeight * 0.42);
+      if(d > 6) map.panBy([0, -d], {duration: 480, essential:true});
+    }
   }
 
   function go(i, opt){
