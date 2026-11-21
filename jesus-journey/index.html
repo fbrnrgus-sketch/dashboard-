@@ -115,7 +115,7 @@
   #card{
     position:fixed;z-index:25;left:0;right:0;bottom:0;
     display:flex;flex-direction:column;
-    max-height:62vh;
+    max-height:58vh;
     background:linear-gradient(180deg,rgba(11,21,29,.95) 0%,rgba(7,14,20,.985) 60%);
     border-top:1px solid rgba(227,187,116,.4);
     border-radius:20px 20px 0 0;
@@ -891,7 +891,7 @@
 
     const isMobile = window.innerWidth < 900;
     const pad = isMobile
-      ? {bottom: Math.min(cardHeight()+18, window.innerHeight*0.66), top: 76, left: 0, right: 0}
+      ? {bottom: Math.min(cardHeight()+18, window.innerHeight*0.62), top: 70, left: 0, right: 0}
       : {bottom: 40, top: 92, left: 480, right: 20};
 
     const opts = {
@@ -1174,31 +1174,44 @@
     el("styleLbl").textContent = styleMode==="sat" ? "위성" : "지형";
   });
 
-  // 전체 여정 보기
-  el("ovBtn").addEventListener("click", function(){
-    stopPlay();
-    const isMobile = window.innerWidth < 900;
+  // 전체 여정 보기 — 카드가 가리지 않는 영역에 경로 전체가 들어오도록 직접 계산
+  function overviewCamera(){
+    const W = window.innerWidth, H = window.innerHeight;
+    const isMobile = W < 900;
     const ch = cardHeight();
     const pad = isMobile
-      ? {top:72, bottom: Math.min(ch*0.9, window.innerHeight*0.54), left:6, right:6}
+      ? {top:68, bottom: Math.min(ch, H*0.58)+14, left:8, right:8}
       : {top:92, bottom:48, left:466, right:36};
-    const b = new maplibregl.LngLatBounds();
-    P.forEach(function(p){ b.extend([p.lng, p.lat]); });
-    let cam = null;
-    try{ cam = map.cameraForBounds(b, {padding:pad, bearing:0, pitch:0}); }catch(e){}
-    if(cam && cam.center && isFinite(cam.zoom)){
-      map.flyTo({
-        center: cam.center,
-        zoom: cam.zoom - 0.18,
-        pitch: isMobile ? 20 : 26,
-        bearing: 0,
-        padding: pad,
-        duration: 2200,
-        essential: true
-      });
-    }else{
-      map.flyTo({center:[33.5,31.6], zoom: isMobile?6.6:7.2, pitch:22, bearing:0, duration:2200, essential:true});
-    }
+    const lats = P.map(p=>p.lat), lngs = P.map(p=>p.lng);
+    const minLat = Math.min.apply(null,lats), maxLat = Math.max.apply(null,lats);
+    const minLng = Math.min.apply(null,lngs), maxLng = Math.max.apply(null,lngs);
+    const availW = Math.max(120, W-pad.left-pad.right);
+    const availH = Math.max(120, H-pad.top-pad.bottom);
+    const midLng = (minLng+maxLng)/2, midLat = (minLat+maxLat)/2;
+    const cosLat = Math.cos(rad(midLat));
+    const zx = Math.log2(availW*0.92*360/(512*(maxLng-minLng)));
+    const zy = Math.log2(availH*0.86*360*cosLat/(512*(maxLat-minLat)));
+    const z = Math.min(zx, zy, 8.4);
+    const worldPx = 512*Math.pow(2,z);
+    const cx = pad.left + availW/2, cy = pad.top + availH/2;
+    const lngCam = midLng - (cx - W/2)*360/worldPx;
+    const K = worldPx/(2*Math.PI);
+    const mY = t => Math.log(Math.tan(Math.PI/4 + rad(t)/2));
+    const latCam = (2*Math.atan(Math.exp(mY(midLat) - (H/2 - cy)/K)) - Math.PI/2)*180/Math.PI;
+    return {center:[lngCam, latCam], zoom:z, pitch: isMobile?16:22, bearing:0};
+  }
+
+  el("ovBtn").addEventListener("click", function(){
+    stopPlay();
+    const cam = overviewCamera();
+    map.flyTo({
+      center: cam.center,
+      zoom: cam.zoom,
+      pitch: cam.pitch,
+      bearing: cam.bearing,
+      duration: 2200,
+      essential: true
+    });
   });
 
   // 키보드
