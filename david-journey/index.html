@@ -1654,7 +1654,7 @@
     loadFailsafe = setTimeout(hideLoad, 15000);
   }
   map.on("movestart", function(){ showLoad(); loadFailsafeOn(); });
-  map.on("moveend", function(){ if(map.loaded()) hideLoad(); });
+  map.on("moveend", function(){ setTimeout(function(){ if(map.loaded()) hideLoad(); else hideLoad(); }, 900); });
   map.on("idle", hideLoad);
   map.on("sourcedata", function(){ if(map.loaded()) hideLoad(); });
 
