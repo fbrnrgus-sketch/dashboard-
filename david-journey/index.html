@@ -455,6 +455,7 @@
     .ibtn{padding:6px 8px}
     h1{font-size:14px}
     .seenlbl{display:none}
+    #hud{display:none}
   }
   @media (max-width:380px){
     .cper{display:none}
@@ -555,7 +556,7 @@
         <span id="profRange">−300m ~ +930m</span>
       </div>
       <svg id="profile" role="img" aria-label="여정 전체 고도 프로파일"></svg>
-      <div class="foot" id="footNote">거리는 지점 간 직선거리에 고대 도보 경로 보정(×1.18~1.30)을 적용한 추정치이고, 도보 시간은 평지 4km/h·오르막 100m당 10분 기준의 근사값입니다.</div>
+      <div class="foot" id="footNote">거리는 지점 간 직선거리에 고대 도보 경로 보정(×1.18~1.30)을 적용한 추정치이고, 도보 시간은 평지 4km/h·오르막 100m당 10분 기준의 근사값입니다. 성경 인용은 개역개정, 지명 위치는 학계의 주요 비정을 따랐습니다.</div>
     </div>
 
     <div class="sec">
@@ -1304,7 +1305,7 @@
     el("cPer").style.color = ph.color;
     el("cPer").style.borderColor = ph.color+"66";
     el("cPer").style.background = ph.color+"1f";
-    el("periodTxt").textContent = window.innerWidth < 760 ? p.order+"· "+ph.label.split("·")[0].trim() : ph.label;
+    el("periodTxt").textContent = ph.label;
     el("periodBadge").querySelector("i").style.background = ph.color;
     el("periodBadge").style.borderColor = ph.color+"55";
     el("cLat").textContent = p.lat.toFixed(4)+"° N";
