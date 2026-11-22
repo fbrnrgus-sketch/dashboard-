@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b1620" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="description" content="이스라엘·요르단 3D 지형 위에 다윗이 요나단과 헤어져 사울을 피해 도망하고 온 이스라엘의 왕이 되기까지의 여정을 지명·사건·성경 구절·시편과 함께 담은 인터랙티브 지도." />
+<title>다윗의 도피 여정 · 3D 지도</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230b1620'/%3E%3Cpath d='M30 70V34l12 8 8-12 8 12 12-8v36z' fill='%23e3bb74'/%3E%3C/svg%3E" />
+<link href="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.css" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#f2ece0;
+    --ink-dim:#c8bda9;
+    --ink-faint:#8e9aa6;
+    --gold:#e3bb74;
+    --gold-hi:#f8e3b6;
+    --gold-deep:#b98f45;
+    --glass:rgba(9,18,26,.82);
+    --line:rgba(227,187,116,.24);
+    --up:#f0a35e;
+    --down:#78c9c1;
+    --p1:#e3bb74;
+    --p2:#6fbfb3;
+    --p3:#cf8259;
+    --p4:#b59ce0;
+    --radius:18px;
+    --hdr:60px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden}
+  body{
+    background:#08121a;
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","맑은 고딕","Noto Sans KR",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.45;
+    overscroll-behavior:none;
+  }
+  button{font-family:inherit}
+
+  /* ---------- map ---------- */
+  #map{position:fixed;inset:0;background:linear-gradient(180deg,#0a1822 0%,#122b38 42%,#1b3a45 68%,#2a2a24 100%)}
+  .maplibregl-canvas:focus{outline:none}
+  #map::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 80% at 50% 42%,rgba(0,0,0,0) 40%,rgba(4,10,16,.34) 100%);
+  }
+  .maplibregl-ctrl-attrib{background:rgba(9,18,26,.7)!important;border-radius:8px!important;font-size:10px!important}
+  .maplibregl-ctrl-attrib a{color:#b9c6d2!important}
+  .maplibregl-ctrl-group{background:rgba(9,18,26,.8)!important;border:1px solid var(--line)!important;border-radius:12px!important;overflow:hidden}
+  .maplibregl-ctrl-group button+button{border-top:1px solid var(--line)!important}
+  .maplibregl-ctrl-icon{filter:invert(1) hue-rotate(180deg) brightness(1.4)}
+
+  /* ---------- header ---------- */
+  #hdr{
+    position:fixed;top:0;left:0;right:0;z-index:30;
+    display:flex;align-items:center;gap:10px;
+    padding:8px 12px;
+    background:linear-gradient(180deg,rgba(6,13,19,.94) 0%,rgba(6,13,19,.72) 62%,rgba(6,13,19,0) 100%);
+    padding-top:calc(8px + env(safe-area-inset-top,0px));
+    height:calc(var(--hdr) + env(safe-area-inset-top,0px));
+  }
+  .brand{display:flex;align-items:center;gap:9px;min-width:0;flex:1 1 auto;overflow:hidden}
+  .brand>div{min-width:0;overflow:hidden}
+  .mark{
+    width:31px;height:31px;flex:0 0 31px;border-radius:9px;
+    display:grid;place-items:center;
+    background:linear-gradient(150deg,#1d3644,#0d1c26);
+    border:1px solid rgba(227,187,116,.5);
+    color:var(--gold);font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)
+  }
+  h1{margin:0;font-size:15px;font-weight:700;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  h1 em{font-style:normal;color:var(--gold)}
+  .sub{font-size:10.5px;color:var(--ink-faint);letter-spacing:.04em;white-space:nowrap;margin-top:-1px;overflow:hidden;text-overflow:ellipsis}
+  .hdr-right{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+  #periodBadge{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11px;font-weight:600;color:var(--gold-hi);
+    background:rgba(227,187,116,.12);
+    border:1px solid rgba(227,187,116,.34);
+    padding:4px 9px;border-radius:999px;white-space:nowrap;
+    max-width:44vw;overflow:hidden;text-overflow:ellipsis
+  }
+  #periodBadge i{width:7px;height:7px;border-radius:50%;display:inline-block;flex:0 0 7px}
+  .ibtn{
+    appearance:none;cursor:pointer;color:var(--ink);
+    background:rgba(11,22,32,.8);
+    border:1px solid rgba(227,187,116,.28);
+    border-radius:10px;padding:6px 10px;font-size:11.5px;font-weight:600;
+    display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    transition:border-color .18s,background .18s
+  }
+  .ibtn:hover{border-color:rgba(227,187,116,.6);background:rgba(19,36,48,.9)}
+  .ibtn:active{transform:translateY(1px)}
+  .ibtn .ico{font-size:12px;line-height:1;color:var(--gold)}
+
+  /* ---------- HUD ---------- */
+  #hud{
+    position:fixed;z-index:20;
+    top:calc(var(--hdr) + env(safe-area-inset-top,0px) + 8px);right:10px;
+    background:rgba(8,17,24,.72);
+    border:1px solid rgba(227,187,116,.22);
+    border-radius:12px;padding:7px 10px 8px;
+    font-variant-numeric:tabular-nums;
+    font-size:10.5px;color:var(--ink-dim);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    box-shadow:0 6px 20px rgba(0,0,0,.28);
+    min-width:132px;pointer-events:none
+  }
+  #hud .row{display:flex;justify-content:space-between;gap:10px;line-height:1.55}
+  #hud .k{color:#7d8c99;font-size:9.5px;letter-spacing:.06em}
+  #hud .v{color:#e8dfcd;font-weight:600}
+  #hud .v.ele{color:var(--gold-hi)}
+  #hud .hd{font-size:9px;letter-spacing:.1em;color:#6e7d8a;margin-bottom:3px;text-transform:uppercase}
+
+  /* ---------- card ---------- */
+  #card{
+    position:fixed;z-index:25;left:0;right:0;bottom:0;
+    display:flex;flex-direction:column;
+    max-height:62vh;
+    background:linear-gradient(180deg,rgba(11,21,29,.95) 0%,rgba(7,14,20,.985) 60%);
+    border-top:1px solid rgba(227,187,116,.4);
+    border-radius:20px 20px 0 0;
+    box-shadow:0 -14px 40px rgba(0,0,0,.5);
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    transition:max-height .25s ease;
+  }
+  #card::before{
+    content:"";position:absolute;top:-1px;left:0;height:2px;width:var(--prog,0%);
+    background:linear-gradient(90deg,var(--gold-deep),var(--gold-hi));
+    border-radius:2px;transition:width .5s ease;box-shadow:0 0 12px rgba(227,187,116,.6)
+  }
+  .grip{width:38px;height:3px;border-radius:3px;background:rgba(227,187,116,.28);margin:7px auto 0;flex:0 0 auto}
+  .cbody{overflow-y:auto;overscroll-behavior:contain;padding:0 14px 2px;flex:1 1 auto;-webkit-overflow-scrolling:touch}
+  .chead{display:flex;align-items:flex-start;gap:8px;padding:4px 14px 7px}
+  .rank{
+    font-size:10px;font-weight:700;color:var(--gold);
+    border:1px solid rgba(227,187,116,.4);border-radius:7px;
+    padding:2px 6px;margin-top:3px;font-variant-numeric:tabular-nums;letter-spacing:.02em;flex:0 0 auto
+  }
+  .names{min-width:0;flex:1}
+  .cname{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+  .fold{
+    appearance:none;cursor:pointer;flex:0 0 auto;
+    width:26px;height:26px;border-radius:8px;margin-top:1px;
+    border:1px solid rgba(227,187,116,.3);background:rgba(255,255,255,.05);
+    color:var(--gold);font-size:11px;line-height:1;display:grid;place-items:center
+  }
+  #card.compact .cbody{display:none}
+  #card.compact{max-height:none}
+  #card.compact .ctl{padding-top:2px}
+  .cen{margin:1px 0 0;font-size:10.5px;color:var(--ink-faint);letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cper{
+    flex:0 0 auto;font-size:10.5px;font-weight:600;color:var(--gold-hi);
+    background:rgba(227,187,116,.13);border:1px solid rgba(227,187,116,.3);
+    border-radius:8px;padding:3px 7px;margin-top:1px;text-align:center;max-width:36%
+  }
+
+  .meta{display:flex;gap:13px;margin:7px 0 0;font-size:10.5px;color:var(--ink-dim);flex-wrap:wrap}
+  .meta span{display:inline-flex;align-items:center;gap:4px}
+  .meta .n{color:#efe6d4;font-weight:600;font-variant-numeric:tabular-nums}
+  .meta .lab{color:#7f8e9b;font-size:9.5px}
+
+  .scripture{
+    display:flex;align-items:flex-start;gap:6px;margin:9px 0 0;
+    font-size:11.5px;color:#e9d3a8;
+    border-left:2px solid var(--gold-deep);padding-left:8px;
+    font-weight:600;letter-spacing:.01em;line-height:1.5
+  }
+  .scripture .ico{font-size:10px;color:var(--gold);margin-top:2px}
+
+  .summary{margin:7px 0 0;font-size:12.5px;color:#d5cdbd;line-height:1.62;word-break:keep-all}
+
+  .badges{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:11px 0 0}
+  .badge{
+    background:rgba(255,255,255,.035);
+    border:1px solid rgba(255,255,255,.07);
+    border-radius:10px;padding:6px 9px;min-width:0
+  }
+  .badge .bk{display:block;font-size:9px;letter-spacing:.08em;color:#78889a;text-transform:uppercase}
+  .badge .bv{display:block;font-size:13.5px;font-weight:700;color:#f4ecdc;font-variant-numeric:tabular-nums;line-height:1.3}
+  .badge .bs{display:block;font-size:9px;color:#8494a4;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .badge.up .bv{color:var(--up)}
+  .badge.down .bv{color:var(--down)}
+  .badge.flat .bv{color:#d9d2c4}
+
+  /* ---------- sections ---------- */
+  .sec{margin:14px 0 0}
+  .sech{display:flex;align-items:center;gap:7px;font-size:9.5px;letter-spacing:.1em;color:#8b9aa8;margin-bottom:6px;text-transform:uppercase}
+  .sech b{font-weight:700;color:#b3a389;letter-spacing:.04em;font-size:10px}
+  .sech::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.08)}
+
+  .ev{display:flex;gap:8px;padding:6px 0;border-bottom:1px dashed rgba(255,255,255,.055);font-size:11.8px;line-height:1.52;align-items:flex-start}
+  .ev:last-child{border-bottom:0;padding-bottom:2px}
+  .ev .r{
+    flex:0 0 auto;font-size:9.5px;font-weight:700;color:#d7b981;
+    background:rgba(227,187,116,.1);border:1px solid rgba(227,187,116,.22);
+    border-radius:5px;padding:1px 5px;margin-top:1px;white-space:nowrap;font-variant-numeric:tabular-nums
+  }
+  .ev .t{color:#cfc7b7;min-width:0}
+
+  .ps{
+    border:1px solid rgba(227,187,116,.18);border-radius:12px;padding:8px 10px 9px;margin-bottom:7px;
+    background:linear-gradient(160deg,rgba(227,187,116,.06),rgba(255,255,255,.012))
+  }
+  .ps:last-child{margin-bottom:0}
+  .pshead{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .psref{font-size:12px;font-weight:700;color:#f3e2b8;letter-spacing:.01em}
+  .pstype{font-size:8.5px;letter-spacing:.05em;padding:1px 5px;border-radius:4px;border:1px solid;font-weight:700;line-height:1.5}
+  .pstype.dir{color:#f0d79f;border-color:rgba(227,187,116,.5);background:rgba(227,187,116,.13)}
+  .pstype.ctx{color:#9fc8c2;border-color:rgba(111,191,179,.4);background:rgba(111,191,179,.1)}
+  .pstitle{font-size:10.3px;color:#94a3b1;margin-top:3px;line-height:1.45}
+  .pskey{font-size:11.4px;color:#ded5c4;margin-top:5px;line-height:1.55;padding-left:8px;border-left:2px solid rgba(227,187,116,.34)}
+  .pskey b{color:#f3e2b8;font-weight:600;font-variant-numeric:tabular-nums}
+
+  .note{font-size:9.5px;color:#7d8c99;line-height:1.55;margin:5px 0 0;padding-top:5px;border-top:1px solid rgba(255,255,255,.05)}
+  .note b{color:#93a2b0;font-weight:600}
+
+  .profwrap{margin:14px 0 2px;position:relative}
+  .profhead{display:flex;justify-content:space-between;align-items:baseline;font-size:9.5px;color:#7a8a99;letter-spacing:.06em;margin-bottom:1px}
+  .profhead b{color:#b9ab92;font-weight:600;letter-spacing:.02em}
+  #profile{display:block;width:100%;height:104px;cursor:pointer;touch-action:pan-y}
+
+  .foot{font-size:9px;color:#63717e;margin:4px 0 12px;line-height:1.55}
+
+  /* ---------- controls ---------- */
+  .ctl{
+    flex:0 0 auto;padding:8px 14px calc(10px + env(safe-area-inset-bottom,0px));
+    border-top:1px solid rgba(255,255,255,.06);
+    background:rgba(5,11,16,.6)
+  }
+  .ctlrow{display:flex;align-items:center;gap:7px}
+  .nav{
+    appearance:none;cursor:pointer;border-radius:11px;
+    border:1px solid rgba(227,187,116,.3);
+    background:rgba(19,33,44,.9);color:var(--ink);
+    height:38px;font-size:12.5px;font-weight:600;
+    display:inline-flex;align-items:center;justify-content:center;gap:5px;
+    transition:background .16s,border-color .16s
+  }
+  .nav:hover{background:rgba(28,48,62,.95);border-color:rgba(227,187,116,.55)}
+  .nav:active{transform:translateY(1px)}
+  .nav.side{width:46px;font-size:15px;color:var(--gold)}
+  .nav.play{flex:1;background:linear-gradient(150deg,rgba(227,187,116,.2),rgba(227,187,116,.08));border-color:rgba(227,187,116,.5);color:var(--gold-hi)}
+  .nav.play.on{background:linear-gradient(150deg,rgba(227,187,116,.36),rgba(227,187,116,.16))}
+  .nav .pi{font-size:11px}
+  .slider{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .slider .t{font-size:9.5px;color:#7c8b98;font-variant-numeric:tabular-nums;letter-spacing:.04em;flex:0 0 auto}
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;flex:1;height:22px;background:transparent;margin:0
+  }
+  input[type=range]::-webkit-slider-runnable-track{
+    height:3px;border-radius:3px;
+    background:linear-gradient(90deg,var(--gold) 0%,var(--gold) var(--fill,0%),rgba(255,255,255,.14) var(--fill,0%),rgba(255,255,255,.14) 100%)
+  }
+  input[type=range]::-moz-range-track{height:3px;border-radius:3px;background:rgba(255,255,255,.14)}
+  input[type=range]::-moz-range-progress{height:3px;border-radius:3px;background:var(--gold)}
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--gold-hi);border:2px solid #0b1620;margin-top:-5.5px;
+    box-shadow:0 0 0 3px rgba(227,187,116,.22),0 1px 4px rgba(0,0,0,.5)
+  }
+  input[type=range]::-moz-range-thumb{
+    width:14px;height:14px;border-radius:50%;background:var(--gold-hi);border:2px solid #0b1620;
+    box-shadow:0 0 0 3px rgba(227,187,116,.22)
+  }
+
+  /* ---------- markers ---------- */
+  .mk{
+    position:relative;width:22px;height:22px;padding:0;border-radius:50%;
+    cursor:pointer;appearance:none;
+    border:1.5px solid var(--pc,#e3bb74);
+    background:rgba(9,18,26,.82);
+    color:var(--pc,#e3bb74);font-size:9.5px;font-weight:700;line-height:1;
+    display:grid;place-items:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.55);
+    transition:transform .2s,border-color .2s,background .2s,color .2s;
+    font-variant-numeric:tabular-nums
+  }
+  .mk:hover{transform:scale(1.18);z-index:5;border-color:#fff6e2}
+  .mk.done{background:var(--pc,#e3bb74);color:#0c1620;border-color:rgba(255,250,235,.55)}
+  .mk.cur{
+    width:30px;height:30px;font-size:11px;
+    background:linear-gradient(150deg,#fff9ec,var(--pc,#f8e3b6));
+    color:#17222b;border-color:#fff6e2;
+    box-shadow:0 0 0 3px rgba(227,187,116,.3),0 4px 14px rgba(0,0,0,.6);
+    z-index:6
+  }
+  .mk.cur::after{
+    content:"";position:absolute;inset:-1px;border-radius:50%;
+    border:1.5px solid rgba(248,227,182,.75);
+    animation:pulse 2.2s ease-out infinite
+  }
+  @keyframes pulse{
+    0%{transform:scale(1);opacity:.9}
+    70%{transform:scale(2.05);opacity:0}
+    100%{transform:scale(2.05);opacity:0}
+  }
+  .mk .lbl{
+    position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%) translateY(4px);
+    font-size:11px;font-weight:700;color:#fbf2df;white-space:nowrap;
+    background:rgba(8,16,22,.9);border:1px solid rgba(227,187,116,.4);
+    padding:2px 7px;border-radius:7px;pointer-events:none;
+    opacity:0;transition:opacity .25s,transform .25s
+  }
+  .mk.cur .lbl{opacity:1;transform:translateX(-50%) translateY(0)}
+  #map.lowzoom .mk:not(.cur){width:13px;height:13px;border-width:1px}
+  #map.lowzoom .mk:not(.cur) .num{display:none}
+  #map.lowzoom .mk:not(.cur):not(.done){background:rgba(240,220,180,.7)}
+
+  /* ---------- TOC ---------- */
+  #toc{
+    position:fixed;inset:0;z-index:40;display:none;
+    background:rgba(3,8,12,.55);
+    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)
+  }
+  #toc.open{display:block}
+  .tocpanel{
+    position:absolute;right:0;top:0;bottom:0;width:min(410px,90vw);
+    background:linear-gradient(180deg,#0c1820,#070f15);
+    border-left:1px solid var(--line);
+    box-shadow:-16px 0 48px rgba(0,0,0,.55);
+    display:flex;flex-direction:column;animation:slidein .26s ease
+  }
+  @keyframes slidein{from{transform:translateX(24px);opacity:.4}to{transform:translateX(0);opacity:1}}
+  .tochead{display:flex;align-items:center;justify-content:space-between;padding:14px 14px 10px;border-bottom:1px solid rgba(255,255,255,.07);gap:10px}
+  .tochead h2{margin:0;font-size:13.5px;font-weight:700;letter-spacing:.02em}
+  .tochead h2 small{display:block;font-size:10px;color:var(--ink-faint);font-weight:400;margin-top:2px;letter-spacing:.04em}
+  .toclist{overflow-y:auto;padding:6px 8px calc(14px + env(safe-area-inset-bottom,0px));flex:1}
+  .tocgrp{display:flex;align-items:center;gap:7px;padding:11px 8px 5px;font-size:9.5px;letter-spacing:.09em;color:#8b9aa8;text-transform:uppercase}
+  .tocgrp i{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
+  .tocgrp b{color:#c2b393;font-weight:700;letter-spacing:.03em;font-size:10px;text-transform:none}
+  .tocgrp span{margin-left:auto;font-variant-numeric:tabular-nums;letter-spacing:.02em;text-transform:none;font-size:9.5px}
+  .tocrow{
+    width:100%;text-align:left;appearance:none;cursor:pointer;
+    display:flex;gap:10px;align-items:center;
+    background:transparent;border:1px solid transparent;border-radius:11px;
+    padding:8px 9px;color:var(--ink);margin-bottom:2px
+  }
+  .tocrow:hover{background:rgba(255,255,255,.05)}
+  .tocrow.cur{background:rgba(227,187,116,.12);border-color:rgba(227,187,116,.35)}
+  .tocrow .n{
+    flex:0 0 22px;height:22px;border-radius:50%;display:grid;place-items:center;
+    font-size:9.5px;font-weight:700;color:var(--pc,#c9bda6);
+    border:1px solid var(--pc,#e3bb74);font-variant-numeric:tabular-nums
+  }
+  .tocrow.cur .n{background:var(--pc,#e3bb74);color:#17222b}
+  .tocrow .txt{min-width:0;flex:1}
+  .tocrow .nm{display:block;font-size:12.5px;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tocrow .ag{display:block;font-size:10px;color:#8b9aa7;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tocrow .km{font-size:10px;color:#7f8e9b;font-variant-numeric:tabular-nums;flex:0 0 auto}
+  .tocrow .psn{flex:0 0 auto;font-size:9px;color:#d7b981;border:1px solid rgba(227,187,116,.3);border-radius:4px;padding:0 4px;line-height:15px}
+
+  /* ---------- splash / error ---------- */
+  #splash{
+    position:fixed;inset:0;z-index:60;display:grid;place-items:center;
+    background:radial-gradient(80% 60% at 50% 40%,#11242f 0%,#060d13 100%);
+    transition:opacity .55s ease,visibility .55s
+  }
+  #splash.hide{opacity:0;visibility:hidden}
+  .spin{text-align:center}
+  .spin .crown{font-size:26px;color:var(--gold);animation:breathe 2s ease-in-out infinite}
+  @keyframes breathe{0%,100%{opacity:.45;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
+  .spin p{margin:12px 0 0;font-size:11.5px;color:#9aa9b6;letter-spacing:.1em}
+  #err{
+    position:fixed;z-index:70;left:12px;right:12px;top:calc(var(--hdr) + 12px);
+    display:none;padding:10px 12px;border-radius:12px;
+    background:rgba(80,20,20,.92);border:1px solid rgba(255,140,120,.5);
+    color:#ffd9d0;font-size:11.5px;line-height:1.5
+  }
+
+  /* ---------- desktop ---------- */
+  @media (min-width:900px){
+    :root{--hdr:64px}
+    h1{font-size:16.5px}
+    .sub{font-size:11px}
+    #card{
+      left:20px;right:auto;bottom:20px;width:472px;
+      max-height:calc(100vh - 104px);
+      border-radius:var(--radius);
+      border:1px solid rgba(227,187,116,.32);
+      box-shadow:0 24px 60px rgba(0,0,0,.55)
+    }
+    .cbody{padding:0 18px 4px}
+    .chead{padding:6px 18px 8px}
+    .ctl{padding:10px 18px 14px}
+    .cname{font-size:19px}
+    .summary{font-size:13px}
+    .badges{grid-template-columns:1fr 1fr 1fr 1fr}
+    #profile{height:120px}
+    #hud{font-size:11px;min-width:150px;right:18px;top:calc(var(--hdr) + 56px)}
+  }
+  @media (max-width:899px){
+    .cbody{padding:0 12px;scrollbar-width:none}
+    .cbody::-webkit-scrollbar{width:0;height:0}
+    .chead{padding:2px 12px 5px}
+    .cname{font-size:16px}
+    .meta{margin-top:5px;gap:10px}
+    .scripture{margin-top:7px;font-size:11px}
+    .summary{margin-top:5px;font-size:12px;line-height:1.52}
+    .badges{margin-top:8px;gap:5px}
+    .badge{padding:5px 8px}
+    .badge .bv{font-size:12.5px}
+    .badge .bs{font-size:8.5px}
+    .profwrap{margin-top:10px}
+    #profile{height:92px}
+    .foot{font-size:8.5px;margin-bottom:8px}
+    .ctl{padding:6px 12px calc(8px + env(safe-area-inset-bottom,0px))}
+    .nav{height:36px}
+    .ev{font-size:11.3px;padding:5px 0}
+    .ps{margin-bottom:6px}
+  }
+  @media (max-width:700px){
+    .sub{display:none}
+    h1{font-size:13.5px}
+    .brand{gap:6px}
+    .mark{width:26px;height:26px;flex:0 0 26px;font-size:12px;border-radius:7px}
+    #periodBadge{font-size:9.5px;padding:3px 6px;max-width:36vw}
+    #hud{font-size:10px;min-width:112px;padding:6px 8px 7px}
+    .cen{display:none}
+    .cper{max-width:46%;font-size:9.5px;padding:2px 6px;line-height:1.35}
+    .ibtn{padding:6px 7px}
+    .hdr-right{flex:0 0 auto}
+  }
+  @media (max-width:430px){
+    .mark{display:none}
+    h1{font-size:13px}
+  }
+  @media (max-width:560px){
+    #styleLbl, #ovBtn .lb{display:none}
+    .ibtn{padding:6px 8px}
+    h1{font-size:14px}
+    .seenlbl{display:none}
+  }
+  @media (max-width:380px){
+    .cper{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001s!important;transition-duration:.001s!important}
+  }
+</style>
+</head>
+<body>
+
+<script>
+  window.__errs = [];
+  window.addEventListener("error", function(e){ window.__errs.push(String(e.message || e.error)); });
+  window.addEventListener("unhandledrejection", function(e){ window.__errs.push("promise: " + String(e.reason)); });
+</script>
+
+<div id="map"></div>
+
+<header id="hdr">
+  <div class="brand">
+    <div class="mark">♔</div>
+    <div style="min-width:0">
+      <h1>다윗의 <em>도피 여정</em></h1>
+      <div class="sub">이스라엘 3D 지도 · 요나단과의 이별에서 왕위 등극까지</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <span id="periodBadge"><i></i><span id="periodTxt">1기 · 도피의 시작</span></span>
+    <button class="ibtn" id="ovBtn" type="button" title="전체 여정 보기">
+      <span class="ico">🗺</span><span class="lb">전체</span>
+    </button>
+    <button class="ibtn" id="styleBtn" type="button" title="지도 스타일 전환">
+      <span class="ico">🛰</span><span id="styleLbl">위성</span>
+    </button>
+    <button class="ibtn" id="tocBtn" type="button" title="전체 목차">
+      <span class="ico">☰</span><span class="seenlbl">목차</span>
+    </button>
+  </div>
+</header>
+
+<div id="hud">
+  <div class="hd">지도 중심 좌표</div>
+  <div class="row"><span class="k">LAT</span><span class="v" id="hLat">–</span></div>
+  <div class="row"><span class="k">LNG</span><span class="v" id="hLng">–</span></div>
+  <div class="row"><span class="k">ELEV</span><span class="v ele" id="hEle">–</span></div>
+</div>
+
+<section id="card" aria-label="현재 지점 정보">
+  <div class="grip"></div>
+  <div class="chead">
+    <span class="rank" id="cRank">01 / 18</span>
+    <div class="names">
+      <h2 class="cname" id="cName">기브아 · 에셀 바위</h2>
+      <p class="cen" id="cEn">Gibeah of Saul</p>
+    </div>
+    <span class="cper" id="cPer">1기 · 도피의 시작</span>
+    <button class="fold" id="foldBtn" type="button" aria-label="카드 접기">▾</button>
+  </div>
+  <div class="cbody">
+
+    <div class="meta">
+      <span><span class="lab">위도</span> <b class="n" id="cLat">–</b></span>
+      <span><span class="lab">경도</span> <b class="n" id="cLng">–</b></span>
+      <span><span class="lab">해발</span> <b class="n" id="cEle">–</b></span>
+      <span><span class="lab">추정 연대</span> <b class="n" id="cDate">–</b></span>
+    </div>
+
+    <div class="scripture"><span class="ico">📖</span><span id="cScript">–</span></div>
+    <p class="summary" id="cSummary">–</p>
+
+    <div class="badges">
+      <div class="badge" id="bKmBox">
+        <span class="bk">구간 거리</span>
+        <span class="bv" id="bKm">–</span>
+        <span class="bs" id="bKmSub">직전 지점에서</span>
+      </div>
+      <div class="badge" id="bTotBox">
+        <span class="bk">누적 거리</span>
+        <span class="bv" id="bTot">–</span>
+        <span class="bs" id="bTotSub">출발지 대비</span>
+      </div>
+      <div class="badge" id="bEleBox">
+        <span class="bk">고도 변화</span>
+        <span class="bv" id="bEle">–</span>
+        <span class="bs" id="bEleSub">–</span>
+      </div>
+      <div class="badge" id="bTimeBox">
+        <span class="bk">도보 예상</span>
+        <span class="bv" id="bTime">–</span>
+        <span class="bs" id="bTimeSub">–</span>
+      </div>
+    </div>
+
+    <div class="profwrap">
+      <div class="profhead">
+        <span><b>고도 프로파일</b> · 사해 수면(0m) 기준</span>
+        <span id="profRange">−300m ~ +930m</span>
+      </div>
+      <svg id="profile" role="img" aria-label="여정 전체 고도 프로파일"></svg>
+      <div class="foot" id="footNote">거리는 지점 간 직선거리에 고대 도보 경로 보정(×1.18~1.30)을 적용한 추정치이고, 도보 시간은 평지 4km/h·오르막 100m당 10분 기준의 근사값입니다.</div>
+    </div>
+
+    <div class="sec">
+      <div class="sech"><b>사건 기록</b> · 사무엘상·하</div>
+      <div id="evList"></div>
+    </div>
+
+    <div class="sec">
+      <div class="sech"><b>다윗의 시편</b> · 이 지명과 연결된 기도</div>
+      <div id="psList"></div>
+    </div>
+
+    <div class="note" id="cNote"></div>
+  </div>
+
+  <div class="ctl">
+    <div class="ctlrow">
+      <button class="nav side" id="prevBtn" type="button" aria-label="이전 지점">◀</button>
+      <button class="nav play" id="playBtn" type="button" aria-label="자동 재생"><span class="pi">▶</span><span id="playLbl">자동 재생</span></button>
+      <button class="nav side" id="nextBtn" type="button" aria-label="다음 지점">▶</button>
+    </div>
+    <div class="slider">
+      <span class="t" id="sliderCur">1</span>
+      <input id="slider" type="range" min="0" max="17" step="1" value="0" aria-label="여정 타임라인" />
+      <span class="t" id="sliderMax">18</span>
+    </div>
+  </div>
+</section>
+
+<div id="toc" role="dialog" aria-modal="true" aria-label="전체 목차">
+  <div class="tocpanel">
+    <div class="tochead">
+      <h2>전체 여정 <small id="tocSub">18개 지점 · 도피 → 등극</small></h2>
+      <button class="ibtn" id="tocClose" type="button" aria-label="목차 닫기">✕ 닫기</button>
+    </div>
+    <div class="toclist" id="tocList"></div>
+  </div>
+</div>
+
+<div id="err"></div>
+
+<div id="splash">
+  <div class="spin">
+    <div class="crown">♔</div>
+    <p id="splashMsg">3D 지형을 불러오는 중…</p>
+  </div>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* =========================================================
+     1. 여정 데이터 — 시간순 18개 지점
+     phase: 1 도피의 시작 / 2 유다 광야 은신 / 3 블레셋 망명 / 4 왕위 등극
+     via: 경로선이 지형을 따라가도록 넣은 경유 좌표 [lat,lng]
+     factor: 직선거리 → 고대 도보 경로 보정 계수
+     ========================================================= */
+  const PHASES = {
+    1:{label:"1기 · 도피의 시작", color:"#e3bb74", date:"기원전 1015년경"},
+    2:{label:"2기 · 유다 광야 은신", color:"#6fbfb3", date:"기원전 1014~1010년경"},
+    3:{label:"3기 · 블레셋 망명", color:"#cf8259", date:"기원전 1011~1010년경"},
+    4:{label:"4기 · 왕위 등극", color:"#b59ce0", date:"기원전 1010~1003년경"}
+  };
+
+  const RAW = [
+    { name:"기브아 · 에셀 바위", english_name:"Gibeah of Saul (Tell el-Ful) · Ezel Stone",
+      phase:1, lat:31.8233, lng:35.2303, elevation_m:830, factor:1.2, via:[],
+      scripture:"사무엘상 20:1-42",
+      summary:"사울의 아들 요나단이 아버지의 살의를 확인하고, 사흘째 되는 날 에셀 바위 곁에서 두 사람이 서로 울며 언약을 다시 세운 뒤 헤어졌습니다. 다윗은 이날부터 사울의 궁정을 떠나 도피 생활을 시작했습니다.",
+      events:[
+        {r:"삼상 19:11-17", t:"사울이 다윗의 집을 지키게 하여 죽이려 했으나, 아내 미갈이 그를 창밖으로 내려보내 도망하게 했습니다."},
+        {r:"삼상 20:1-11", t:"다윗이 요나단에게 \"내 죄가 무엇이냐\"고 물어 사울의 결심을 확인했습니다."},
+        {r:"삼상 20:12-23", t:"요나단이 들에서 여호와를 두고 다윗과 언약을 세우고, 사흘째 되는 날 신호를 정했습니다."},
+        {r:"삼상 20:24-34", t:"신월 잔치 자리에서 사울이 요나단에게 창을 던졌습니다 — 살의가 아버지의 아들에게까지 향했습니다."},
+        {r:"삼상 20:35-42", t:"에셀 바위 곁에서 두 사람이 서로 울며 \"여호와께서 너와 나 사이에 영원히 계시기를\" 언약하고 헤어졌습니다."}
+      ],
+      psalms:[
+        {ref:"시편 59편", type:"dir", title:"표제 — \"사울이 사람을 보내어 다윗을 죽이려고 그 집을 지킬 때에 다윗이 지은 시\" (삼상 19:11-17, 같은 기브아의 사건)",
+         key:"<b>59:1</b> \"나의 하나님이여 나를 원수에게서 건지시고 일어나 나를 치는 자에게서 높은 곳으로 인도하소서\" · <b>59:16</b> \"주는 나의 보호시요 나의 환난 날에 피난처심이니이다\""}
+      ],
+      note:"기브아는 사울의 도성으로 베냐민 지파의 <b>텔 엘풀(Tell el-Ful, 해발 약 830m)</b>로 비정합니다. 에셀 바위의 정확한 위치는 전하지 않습니다."
+    },
+
+    { name:"놉 (제사장의 성읍)", english_name:"Nob",
+      phase:1, lat:31.7996, lng:35.2330, elevation_m:780, factor:1.25, via:[],
+      scripture:"사무엘상 21:1-9; 22:9-19",
+      summary:"제사장 아히멜렉에게서 성소의 진설병과 골리앗의 칼을 받았습니다. 에돔 사람 도엑의 고발로 사울이 아히멜렉의 온 집과 놉의 제사장 85명, 성읍의 남녀와 짐승까지 죽였고, 아들 아비아달만 살아나 다윗을 따랐습니다.",
+      events:[
+        {r:"삼상 21:1-6", t:"굶주린 다윗과 부하들에게 성소의 진설병을 주었습니다. 아히멜렉은 그가 왜 홀로인지 보고 두려워했습니다."},
+        {r:"삼상 21:7", t:"사울의 신하 에돔 사람 도엑이 그 자리에 있었습니다 — 학살의 발단이 됩니다."},
+        {r:"삼상 21:8-9", t:"에봇 뒤에 싼 골리앗의 칼을 받아 \"그와 같은 칼이 없습니다\" 하며 가지고 떠났습니다."},
+        {r:"삼상 22:9-10", t:"도엑이 사울에게 \"내가 다윗이 놉에서 아히멜렉에게 간 것을 보았습니다\"고 고발했습니다."},
+        {r:"삼상 22:11-19", t:"명령을 거부한 사울의 신하들 대신 도엑이 제사장 85명과 놉 성읍의 남녀·아이·짐승을 학살했습니다."},
+        {r:"삼상 22:20-23", t:"아히멜렉의 아들 아비아달이 도망해 다윗에게 왔고, 다윗은 \"네 집의 모든 사람의 죽음이 내 책임이라\"고 고백했습니다."},
+        {r:"막 2:25-26", t:"예수께서 안식일 논쟁에서 이 사건을 인용하셨습니다."}
+      ],
+      psalms:[
+        {ref:"시편 52편", type:"dir", title:"표제 — \"도엑이 사울에게 가서 다윗이 아히멜렉의 집에 이르렀다고 말할 때에 다윗이 지은 마스길\"",
+         key:"<b>52:3</b> \"네 혀가 악을 꾀함이 날카로운 삭도 같아서\" · <b>52:8</b> \"그러나 나는 하나님의 집에 있는 푸른 감람나무 같음이여 하나님의 인자하심을 영원히 의지하리로다\""}
+      ],
+      note:"놉은 예루살렘 북동쪽 스코푸스 산 일대(<b>라스 엘 메샤리프</b> 등)로 추정되며 확정되지 않았습니다. 사울의 왕좌에서 걸어서 반나절 거리입니다."
+    },
+
+    { name:"가드 (1차)", english_name:"Gath (Tell es-Safi)",
+      phase:1, lat:31.6998, lng:34.8472, elevation_m:130, factor:1.2,
+      via:[[31.7900,35.1500],[31.7600,35.0300],[31.7200,34.9200]],
+      scripture:"사무엘상 21:10-15",
+      summary:"블레셋 가드로 도망했으나 아기스 왕의 신하들이 \"이 사람은 그 땅의 왕 다윗이 아니냐\"고 외치자, 다윗은 문짝에 낙서하고 수염에 침을 흘리며 미친 사람처럼 행동해 목숨을 건졌습니다. 이때의 기도가 시편 34편과 56편으로 전합니다.",
+      events:[
+        {r:"삼상 21:10", t:"그 날 일어나 사울을 피해 가드의 아기스 왕에게로 갔습니다 — 이스라엘의 왕이 블레셋의 성읍으로 피신한 것입니다."},
+        {r:"삼상 21:11-12", t:"\"그의 노래에 이르기를 사울이 죽인 자는 천천이요 다윗은 만만이로다\"는 노래를 듣고 크게 두려워했습니다."},
+        {r:"삼상 21:13", t:"문짝에 글자를 그어 침을 수염에 흘리며 손으로 대문을 두드리며 미친 체했습니다."},
+        {r:"삼상 21:14-15", t:"아기스가 \"미친 자를 어찌 내게 데려왔느냐\"며 내쫓았습니다."}
+      ],
+      psalms:[
+        {ref:"시편 34편", type:"dir", title:"표제 — \"아비멜렉 앞에서 미친 체하다가 쫓겨났을 때에 지은 시\" (아비멜렉은 아기스의 다른 이름으로 봅니다)",
+         key:"<b>34:4</b> \"내가 여호와께 간청하므로 여호와께서 내게 응답하시고 모든 두려움에서 나를 건지셨도다\" · <b>34:18</b> \"여호와는 마음이 상한 자에게 가까이 하시고 중심에 통회하는 자를 구원하시는도다\""},
+        {ref:"시편 56편", type:"dir", title:"표제 — \"블레셋 사람들이 가드에서 그를 잡았을 때에 다윗이 지은 밋담\"",
+         key:"<b>56:3</b> \"내가 두려워하는 날에는 내가 주를 의지하리이다\" · <b>56:8</b> \"나의 눈물을 주의 병에 담으소서 이것이 주의 책에 기록되지 아니하였나이까\""}
+      ],
+      note:"가드는 블레셋 오대 성읍 중 하나로 <b>텔 에스사피(Tell es-Safi, 해발 약 130m)</b>로 비정됩니다."
+    },
+
+    { name:"아둘람 굴", english_name:"Adullam (Khirbet esh-Sheikh Madhkur)",
+      phase:1, lat:31.6500, lng:35.0000, elevation_m:400, factor:1.2,
+      via:[[31.6700,34.9200],[31.6570,34.9700]],
+      scripture:"사무엘상 22:1-2; 삼하 23:13-17",
+      summary:"형제들과 아버지의 온 집이 내려오고, 환난을 당한 자·빚진 자·마음에 원통한 자 사백 명쯤이 모여 다윗을 따랐습니다. 다윗은 이들을 거느린 장관이 되었습니다. 이 굴에서 부른 기도가 시편 57편과 142편으로 전합니다.",
+      events:[
+        {r:"삼상 22:1", t:"다윗이 놉을 떠나 아둘람 굴로 피했고, 형제들과 아버지의 온 집이 그에게로 내려왔습니다."},
+        {r:"삼상 22:2", t:"환난을 당한 자·빚진 자·마음에 원통한 자가 모여 약 사백 명이 되었고, 다윗이 그들을 거느린 장관이 되었습니다."},
+        {r:"삼하 23:13-17", t:"아둘람 굴에 있을 때 블레셋 수비대가 베들레헴에 있었고, 세 용사가 수비대를 뚫고 베들레헴 성문 우물물을 길어 왔습니다. 다윗은 \"내 하나님 여호와여 나는 이것을 마실 수 없나이다\" 하며 여호와께 부었습니다."},
+        {r:"대상 11:15-19", t:"같은 사건의 병행 기록입니다."}
+      ],
+      psalms:[
+        {ref:"시편 57편", type:"dir", title:"표제 — \"다윗이 사울을 피하여 굴에 있을 때에 지은 시\"",
+         key:"<b>57:1</b> \"하나님이여 내게 은혜를 베푸소서 내 영혼이 주께로 피하되 주의 날개 그늘 아래서 이 재앙이 지나가기까지 피하리이다\" · <b>57:7-8</b> \"내 마음이 확정되었사오니 내가 노래하고 찬송하리이다 내 영광아 깰지어다 내가 새벽을 깨우리로다\""},
+        {ref:"시편 142편", type:"dir", title:"표제 — \"다윗이 굴에 있을 때에 지은 마스길 곧 기도\"",
+         key:"<b>142:2</b> \"내가 내 원통함을 그의 앞에 토로하며 내 근심한 것을 그에게 말하였나이다\" · <b>142:5</b> \"여호와여 내가 주께 부르짖어 말하기를 주는 나의 피난처시요 살아 있는 사람들의 땅에서 나의 분깃이시라 하였나이다\""}
+      ],
+      note:"아둘람은 유다 평지(셰펠라)의 동굴 지대, <b>크히르베트 엣 셰이크 마드쿠르</b>로 추정합니다. 굴 표제를 띤 두 시편은 엔게디 굴(10번)과도 함께 읽힙니다."
+    },
+
+    { name:"모압 미스베", english_name:"Mizpah of Moab (Rujm el-Meshrefeh?)",
+      phase:1, lat:31.6550, lng:35.7200, elevation_m:780, factor:1.25,
+      via:[[31.6800,35.1000],[31.7200,35.2400],[31.7900,35.4000],[31.8100,35.5000],[31.7900,35.5800],[31.7300,35.6500],[31.6900,35.7000]],
+      scripture:"사무엘상 22:3-4",
+      summary:"다윗이 모압 왕에게 \"하나님이 나를 위하여 어떻게 하실지 알 때까지\" 부모를 머물게 해 달라 청해 허락을 받았습니다. 그의 증조모 룻이 모압 여인이었습니다. 선지자 갓이 유다로 돌아가라고 전하자 다윗은 그 길을 떠났습니다.",
+      events:[
+        {r:"삼상 22:3", t:"미스베로 가서 모압 왕에게 \"원하건대 내 부모가 왕과 함께 있게 하여 주소서\" 하고 청했습니다."},
+        {r:"삼상 22:4", t:"왕의 허락을 받아 부모가 다윗이 요새에 있는 날 동안 모압 왕과 함께 있었습니다."},
+        {r:"삼상 22:5", t:"선지자 갓이 다윗에게 \"모압에 머물지 말고 유다 땅으로 들어가라\" 하여 그대로 옮겼습니다."},
+        {r:"룻 4:17-22", t:"다윗의 계보 — 증조모 룻이 모압 여인이고, 그 아들이 오벳, 손자가 이새입니다."}
+      ],
+      psalms:[
+        {ref:"시편 16편", type:"ctx", title:"표제 없음 — 나그네 길의 신뢰를 담은 밋담(정황 연결). 부모를 맡기고 낯선 땅에 머무는 자리의 기도로 읽습니다.",
+         key:"<b>16:1</b> \"하나님이여 나를 지켜 주소서 내가 주께 피하나이다\" · <b>16:5</b> \"여호와는 나의 산업과 나의 잔의 소득이시니 나의 분깃을 지키시나이다\""}
+      ],
+      note:"모압의 미스베 위치는 확정되지 않았습니다. <b>키르 모압(케라크)</b> 또는 마데바 남서쪽 <b>루줌 엘 메슈레페</b>로 보는 견해가 있습니다. 지도 좌표는 후자 계열의 추정 위치입니다."
+    },
+
+    { name:"헤렛 수풀", english_name:"Forest of Hereth",
+      phase:2, lat:31.6215, lng:35.0293, elevation_m:450, factor:1.22,
+      via:[[31.7000,35.6300],[31.7600,35.5600],[31.8000,35.4600],[31.7500,35.3000],[31.6800,35.1500],[31.6400,35.0700]],
+      scripture:"사무엘상 22:5",
+      summary:"선지자 갓의 권고로 다윗은 모압을 떠나 헤렛 수풀로 옮겼습니다. 헤브론 산지 서쪽 가장자리의 숲으로, 유다 땅에서의 광야 은신이 여기서 시작됩니다.",
+      events:[
+        {r:"삼상 22:5", t:"\"다윗이 모압 왕의 요새에서 도망하여 헤렛 수풀로 가서 있으니\" — 유다 땅으로의 귀환이 도피 생활의 새 국면을 엽니다."}
+      ],
+      psalms:[
+        {ref:"시편 11편", type:"ctx", title:"표제 없음 — \"네 산으로 도망하라\"는 권고 앞에서 여호와께 피하는 기도(정황 연결).",
+         key:"<b>11:1</b> \"내가 여호와께 피하였거니와 너희가 내 영혼에게 새 같이 네 산으로 도망하라 함은 어찌함인가\" · <b>11:7</b> \"여호와는 의로우사 의로운 일을 좋아하시나니 정직한 자는 그 얼굴을 뵈오리로다\""}
+      ],
+      note:"헤렛은 아둘람·그일라 부근(<b>크히르베트 호레이사</b> 일대)으로 추정합니다. 호레스와 같은 이름 계열로 보는 견해도 있습니다."
+    },
+
+    { name:"그일라", english_name:"Keilah (Khirbet Qila)",
+      phase:2, lat:31.6142, lng:35.0028, elevation_m:475, factor:1.25,
+      via:[[31.6180,35.0120]],
+      scripture:"사무엘상 23:1-13",
+      summary:"블레셋이 그일라의 타작마당을 약탈하자 다윗이 여호와께 물어 출전해 성읍을 구하고 큰 전리품을 얻었습니다. 그러나 사울이 성읍을 포위하려 하자 에봇으로 두 번 물어 \"그들이 나를 넘겨주리이다\"를 확인하고 육백 명과 함께 빠져나갔습니다.",
+      events:[
+        {r:"삼상 23:1-2", t:"블레셋이 그일라의 타작마당을 치고 곡식을 빼앗는다는 소식에 여호와께 물었습니다."},
+        {r:"삼상 23:3-5", t:"부하들이 두려워하자 다시 물었고, 이에 출전해 블레셋을 쳤습니다."},
+        {r:"삼상 23:6", t:"아히멜렉의 아들 아비아달이 에봇을 들고 다윗에게로 도피해 왔습니다."},
+        {r:"삼상 23:7-8", t:"사울이 \"하나님이 그를 내 손에 넘기셨다\" 하며 그일라 성읍을 포위하려 했습니다."},
+        {r:"삼상 23:9-12", t:"다윗이 에봇으로 물었습니다 — \"사울이 내려오리이까\" \"그일라 사람들이 나를 넘겨주리까\" — 그리고 두 번 다 확인했습니다."},
+        {r:"삼상 23:13", t:"다윗이 육백 명과 함께 일어나 그일라를 떠났고, 사울은 그 소식을 듣고 나가지 않았습니다."}
+      ],
+      psalms:[
+        {ref:"시편 31편", type:"ctx", title:"표제 없음 — 원수의 손에 넘겨지지 않게 해 달라는 넓은 곳으로 인도하신 고백(정황 연결).",
+         key:"<b>31:8</b> \"주께서 나를 원수의 수중에 가두지 아니하셨고 내 발을 넓은 곳에 세우셨나이다\" · <b>31:5</b> \"내 영을 주의 손에 부탁하나이다\""}
+      ],
+      note:"그일라는 <b>크히르베트 킬라(해발 약 475m)</b>로 비정됩니다. 유다 평지와 산지가 만나는 요충지입니다."
+    },
+
+    { name:"십 광야 · 호레스", english_name:"Wilderness of Ziph · Horesh",
+      phase:2, lat:31.4790, lng:35.1290, elevation_m:800, factor:1.22,
+      via:[[31.5700,35.0500],[31.5300,35.0900],[31.5000,35.1150]],
+      scripture:"사무엘상 23:14-24",
+      summary:"십 광야의 산성과 호레스 산지에 숨었으나 십 사람들이 사울에게 고발했습니다. 요나단이 마지막으로 찾아와 \"너는 반드시 이스라엘의 왕이 되리라\" 하며 그의 손을 굳게 하고, 두 사람이 여호와 앞에서 언약을 세웠습니다.",
+      events:[
+        {r:"삼상 23:14", t:"다윗이 십 광야의 산성들에 머물었습니다. 사울은 날마다 그를 찾았으나 하나님이 그를 넘기지 않으셨습니다."},
+        {r:"삼상 23:15-18", t:"요나단이 호레스로 와서 \"너는 반드시 이스라엘의 왕이 되리라\" 하며 그의 손을 굳게 하고, 두 사람이 여호와 앞에서 언약을 세웠습니다 — 마지막 만남입니다."},
+        {r:"삼상 23:19-24", t:"십 사람들이 기브아의 사울에게 가서 \"다윗이 하길라 산 남쪽 예시몬의 호레스에 숨어 있지 아니하냐\"고 고발했습니다."}
+      ],
+      psalms:[
+        {ref:"시편 54편", type:"dir", title:"표제 — \"십 사람들이 사울에게 나아가 이르되 다윗이 우리 가운데 숨어 있지 아니하냐 할 때에 다윗이 지은 마스길\"",
+         key:"<b>54:1</b> \"하나님이여 주의 이름으로 나를 구원하시고 주의 힘으로 나를 변호하소서\" · <b>54:4</b> \"하나님은 나를 돕는 이시며 주께서는 내 생명을 붙들어 주시는 이시니이다\""}
+      ],
+      note:"십은 <b>텔 지프(해발 약 850m)</b>, 호레스는 그 북쪽 산지로 봅니다. 예시몬은 사해를 향해 열린 황무지입니다."
+    },
+
+    { name:"마온 광야 · 셀라하마느곳", english_name:"Wilderness of Maon · Sela Hammahlekoth",
+      phase:2, lat:31.4260, lng:35.2420, elevation_m:200, factor:1.2,
+      via:[[31.4500,35.1700],[31.4350,35.2100]],
+      scripture:"사무엘상 23:25-29",
+      summary:"사울이 산 이쪽으로, 다윗이 저쪽으로 돌며 포위가 좁혀지던 순간 블레셋이 침공했다는 사자가 와서 사울이 추격을 그쳤습니다. 그 바위를 \"셀라하마느곳\"(나뉨의 바위)이라 불렀습니다.",
+      events:[
+        {r:"삼상 23:25-26", t:"사울이 3천 명을 이끌고 추격해 포위가 좁혀졌습니다. 다윗은 급히 사해로 내려가는 계곡 쪽으로 돌았습니다."},
+        {r:"삼상 23:27-28", t:"\"블레셋 사람들이 땅을 침략하였나이다 속히 오소서\" — 사울이 추격을 그치고 돌아갔습니다. 그 바위를 셀라하마느곳이라 불렀습니다."},
+        {r:"삼상 23:29", t:"다윗이 거기서 올라가 엔게디 광야에 머물렀습니다."}
+      ],
+      psalms:[
+        {ref:"시편 63편", type:"dir", title:"표제 — \"다윗이 유다 광야에 있을 때에 지은 시\" (유다 광야 전반에 걸린 표제)",
+         key:"<b>63:1</b> \"하나님이여 주는 나의 하나님이시라 내가 간절히 주를 찾되 물이 없어 마르고 황폐한 땅에서 내 영혼이 주를 갈망하며\" · <b>63:7</b> \"주는 나의 도움이 되셨음이라 내가 주의 날개 그늘에서 즐겁게 부르리이다\""}
+      ],
+      note:"셀라하마느곳의 위치는 전하지 않습니다. 마온 광야 동쪽, 사해로 급히 떨어지는 계곡 지대 어딘가로 봅니다."
+    },
+
+    { name:"엔게디 굴", english_name:"En Gedi",
+      phase:2, lat:31.4600, lng:35.3900, elevation_m:-300, factor:1.25,
+      via:[[31.4400,35.2800],[31.4500,35.3400]],
+      scripture:"사무엘상 24:1-22",
+      summary:"사울이 삼천 명을 이끌고 엔게디 광야에 이르렀고, 다윗은 굴 속에서 사울의 겉옷 자락을 베고도 \"여호와의 기름 부으신 자에게 손을 대지 않겠다\"며 살려 보냈습니다. 사울은 울며 \"네가 반드시 왕이 되리라\"고 고백했습니다.",
+      events:[
+        {r:"삼상 24:1-3", t:"사울이 엔게디 광야에서 다윗을 찾는다는 소식을 듣고 3천 명을 이끌고 왔고, 길가 양 우리 곁 굴에 들어갔습니다."},
+        {r:"삼상 24:4-7", t:"부하들이 \"여호와께서 네 원수를 네 손에 넘기셨다\" 했으나, 다윗은 겉옷 자락만 베고 마음에 찔려 \"여호와의 기름 부으신 자에게 손을 대는 것은 여호와께서 금하신다\" 하며 막았습니다."},
+        {r:"삼상 24:8-15", t:"다윗이 굴에서 나와 \"어찌하여 무고한 사람을 죽이려 하십니까\" 하며 자기 의를 여호와께 맡겼습니다."},
+        {r:"삼상 24:16-21", t:"사울이 울며 \"네가 나보다 의롭도다\" 하고 \"이스라엘 나라가 네 손에 굳게 서리라\"고 고백했습니다."},
+        {r:"삼상 24:22", t:"사울이 집으로 돌아갔고, 다윗은 산성으로 올라갔습니다."}
+      ],
+      psalms:[
+        {ref:"시편 57편 · 142편", type:"dir", title:"굴 표제 — 아둘람 굴(4번)과 함께 읽히는 두 편입니다. 굴 속에서도 새벽을 깨우겠다는 57:8의 고백이 이 사건과 잘 맞닿습니다.",
+         key:"<b>57:1</b> \"주의 날개 그늘 아래서 이 재앙이 지나가기까지 피하리이다\" · <b>142:5</b> \"주는 나의 피난처시요 살아 있는 사람들의 땅에서 나의 분깃이시라\""}
+      ],
+      note:"엔게디는 사해 서안의 오아시스(해발 약 −300m)로, 굴이 많은 절벽 지대입니다. 사해 수면이 이 여정의 최저점입니다."
+    },
+
+    { name:"마온 · 갈멜 (바란 광야)", english_name:"Maon · Carmel of Judah",
+      phase:2, lat:31.4239, lng:35.1339, elevation_m:550, factor:1.22,
+      via:[[31.4600,35.2500],[31.4500,35.1900],[31.4300,35.1500]],
+      scripture:"사무엘상 25:1-44",
+      summary:"사무엘이 죽어 온 이스라엘이 라마에서 애곡하고 장사했습니다. 갈멜 사람 나발이 양털 깎는 잔치에서 다윗의 청을 모욕하자 다윗이 칼을 들었으나, 아비가일의 지혜로운 만류로 피를 흘리지 않았습니다. 나발이 죽은 뒤 아비가일은 다윗의 아내가 되었습니다.",
+      events:[
+        {r:"삼상 25:1", t:"사무엘이 죽고 온 이스라엘이 라마에서 애곡하며 장사했습니다. 다윗은 광야로 내려갔습니다."},
+        {r:"삼상 25:2-11", t:"갈멜 사람 나발이 양 3천·염소 1천을 가진 부자였으나, \"다윗이 누구냐\"며 청을 모욕적으로 거절했습니다."},
+        {r:"삼상 25:12-22", t:"다윗이 사백 명을 이끌고 올라가 \"그 집의 남자 하나도 남기지 않겠다\" 했습니다."},
+        {r:"삼상 25:23-35", t:"아비가일이 떡과 포도주를 싣고 나와 만류했습니다 — \"여호와께서 왕의 손을 붙드시리니 사울의 창을 받지 마소서 한 피를 흘리지 마소서\"."},
+        {r:"삼상 25:36-38", t:"나발이 열흘 뒤에 죽었습니다."},
+        {r:"삼상 25:39-44", t:"다윗이 아비가일을 아내로 맞아들였습니다."}
+      ],
+      psalms:[
+        {ref:"시편 17편", type:"ctx", title:"표제 없음 — \"어찌하여 내게 악을 갚으십니까\"라는 순간, 칼을 내려놓고 여호와의 판단에 맡기는 기도(정황 연결).",
+         key:"<b>17:7</b> \"주께서 주께 피하는 자들을 그 일어나 치는 자들에게서 오른손으로 구원하시는 주의 기이한 인자를 보이소서\" · <b>17:15</b> \"내가 의를 따라 주의 얼굴을 뵈오리이다\""}
+      ],
+      note:"삼상 25:1의 \"바란 광야\"는 사본에 따라 \"마온 광야\"로 읽기도 합니다(70인역). 갈멜은 <b>크히르베트 엘 카르밀(해발 약 550m)</b>로, 갈릴리 갈멜 산과 다른 곳입니다."
+    },
+
+    { name:"십 광야 · 하길라 산", english_name:"Hill of Hachilah (Zahrat al-Kula)",
+      phase:2, lat:31.4666, lng:35.2167, elevation_m:300, factor:1.25,
+      via:[[31.4500,35.1750],[31.4600,35.2000]],
+      scripture:"사무엘상 26:1-25",
+      summary:"십 사람들의 고발로 사울이 다시 삼천 명을 이끌고 왔고, 다윗과 아비새가 밤에 진영에 들어가 왕의 창과 물병만 가져왔습니다. 다윗은 언덕 위에서 자기 무고를 외쳤고 사울은 \"내가 어리석었다\"고 고백했으나, 두 사람의 길은 다시 만나지 않았습니다.",
+      events:[
+        {r:"삼상 26:1-4", t:"십 사람들이 다시 사울에게 고발했고, 사울이 3천 명을 이끌고 하길라 산으로 내려왔습니다."},
+        {r:"삼상 26:5-12", t:"다윗과 아비새가 밤에 사울의 진영에 들어가 창과 물병만 가지고 나왔습니다 — \"여호와께서 생명을 주심은\" 내가 손을 대지 않겠다며."},
+        {r:"삼상 26:13-16", t:"다윗이 언덕 위에서 아브넬을 꾸짖었습니다 — \"너는 왕을 지키지 못했다. 왕의 창과 물병을 찾으라\"."},
+        {r:"삼상 26:17-25", t:"사울이 \"내 아들 다윗아, 이도 내가 잘못했다\" 하며 돌아갔습니다. 두 사람의 마지막 대화입니다."}
+      ],
+      psalms:[
+        {ref:"시편 7편", type:"dir", title:"표제 — \"베냐민 사람 구스의 말로 여호와께 노래한 비가\" (구스가 누구인지는 미확정이나, 사울을 따르는 베냐민 사람의 고발에 연결해 읽습니다)",
+         key:"<b>7:8</b> \"여호와께서 나의 의와 성실함을 따라 나를 판단하시기를 원하나이다\" · <b>7:10</b> \"나를 보호하시는 것은 하나님뿐이시니\""}
+      ],
+      note:"하길라 산은 십 동쪽, 예시몬(황무지) 맞은편 <b>자흐라트 엘 쿨라</b> 일대의 구릉으로 봅니다."
+    },
+
+    { name:"가드 (2차 망명)", english_name:"Gath",
+      phase:3, lat:31.6998, lng:34.8472, elevation_m:130, factor:1.22,
+      via:[[31.5300,34.9800],[31.6000,34.9400],[31.6600,34.8900]],
+      scripture:"사무엘상 27:1-4",
+      summary:"\"사울의 손에 하루도 있다가 죽으리라보다는\" 결단하고, 육백 명과 그들의 가족을 이끌고 아기스 왕에게로 내려갔습니다. 사울은 다시 그를 찾지 않았습니다.",
+      events:[
+        {r:"삼상 27:1", t:"다윗이 마음에 이르기를 \"사울이 하루라도 내게 손을 대면 죽으리라\" 하고 블레셋 땅으로 가기로 결심했습니다."},
+        {r:"삼상 27:2-3", t:"육백 명과 두 아내와 각 사람의 가족을 데리고 가드의 아기스에게로 갔습니다."},
+        {r:"삼상 27:4", t:"사울이 다윗이 가드로 도망한 것을 듣고 다시는 그를 찾지 아니하였습니다."},
+        {r:"삼상 27:5-7", t:"아기스가 시글락을 주어 다윗이 1년 4개월을 머물렀습니다."}
+      ],
+      psalms:[
+        {ref:"시편 27편", type:"ctx", title:"표제 없음 — \"빛과 구원\"이신 여호와 앞에서 안전을 찾고, 고향을 떠난 자리의 신뢰를 고백(정황 연결).",
+         key:"<b>27:1</b> \"여호와는 나의 빛이요 나의 구원이시니 내가 누구를 두려워하리요\" · <b>27:10</b> \"내 부모는 나를 버렸으나 여호와는 나를 영접하시리이다\""}
+      ],
+      note:"1차(3번)는 홀로 도망한 방문, 2차는 가족과 부하를 데리고 온 망명입니다. 같은 가드(텔 에스사피)입니다."
+    },
+
+    { name:"시글락", english_name:"Ziklag (Tel Sera)",
+      phase:3, lat:31.3909, lng:34.6809, elevation_m:156, factor:1.22,
+      via:[[31.5600,34.8200],[31.4900,34.7600],[31.4300,34.7100]],
+      scripture:"사무엘상 27:5-12; 29:1-11",
+      summary:"아기스가 시글락을 다윗에게 주어 블레셋 땅의 한 성읍을 받았고, 1년 사 개월을 머물렀습니다. 그 동안 그술·기르스·아말렉을 쳤으나 아기스에게는 \"유다 남방을 쳤다\"고 보고했습니다.",
+      events:[
+        {r:"삼상 27:5-6", t:"다윗이 \"성읍 하나를 주소서\" 하여 아기스가 시글락을 주었고, 이후 시글락은 유다 왕들의 것이 되었습니다."},
+        {r:"삼상 27:7", t:"다윗이 블레셋 땅에서 1년 4개월을 머물렀습니다."},
+        {r:"삼상 27:8-12", t:"그술·기르스·아말렉을 쳤고, 아기스에게는 \"유다 남방을 쳤다\"고 말했습니다. 아기스는 그를 \"영원히 내 종이 되리라\"고 여겼습니다."},
+        {r:"삼상 29:1-11", t:"블레셋 군대가 이스라엘로 출전할 때 지도자들이 \"이 자를 군대와 함께 보내지 말라\" 하여 다윗은 출전에서 제외되어 시글락으로 돌아갔습니다."}
+      ],
+      psalms:[
+        {ref:"시편 13편", type:"ctx", title:"표제 없음 — \"어느 때까지니이까\"라는 긴 탄식과, 끝내 주의 인자하심을 의뢰하겠다는 고백(정황 연결).",
+         key:"<b>13:1-2</b> \"여호와여 어느 때까지니이까 나를 영원히 잊으시나이까 … 내 마음에 근심하리이까\" · <b>13:5</b> \"나는 오직 주의 인자하심을 의뢰하였사오니\""}
+      ],
+      note:"시글락은 블레셋 남쪽 성읍으로 <b>텔 세라(텔 에쉬 샤리아, 해발 약 156m)</b>로 보는 견해가 가장 널리 받아들여지지만, 크히르베트 아라이·텔 하리프 등 다른 후보지도 있습니다."
+    },
+
+    { name:"브솔 시내 · 아말렉 추격", english_name:"Brook Besor",
+      phase:3, lat:31.3981, lng:34.4367, elevation_m:90, factor:1.2,
+      via:[[31.3850,34.5900],[31.3900,34.5100]],
+      scripture:"사무엘상 30:1-31",
+      summary:"사흘 만에 시글락으로 돌아온 다윗은 불탄 성읍과 사로잡힌 가족을 보고 백성과 함께 크게 울었습니다. 다윗이 여호와께 힘을 얻어 추격해 아말렉을 치고 모든 가족과 전리품을 되찾았으며, 뒤에 남은 자와도 전리품을 나누는 규례를 세웠습니다.",
+      events:[
+        {r:"삼상 30:1-5", t:"아말렉이 시글락을 쳐 성읍을 불태우고 여자·남녀노소를 사로잡아 갔습니다. 두 아내가 사로잡힘을 보고 다윗과 백성이 크게 울었습니다."},
+        {r:"삼상 30:6", t:"모든 사람의 마음이 쓰라려 저희 아들딸들로 다윗을 돌로 치려 할 때, 다윗이 <b>여호와께 힘을 얻고</b> 있었습니다."},
+        {r:"삼상 30:7-8", t:"에봇을 가져다 묻고 \"쫓아가면 미치겠나이까\" 했을 때, \"너는 쫓아가라 반드시 미치고 도로 찾으리라\"는 응답을 받았습니다."},
+        {r:"삼상 30:9-10", t:"브솔 시내에 이르렀을 때 600명 중 200명이 피로하여 건너지 못하고 남았습니다."},
+        {r:"삼상 30:11-15", t:"들에서 버려진 이집트 소년을 고쳐 주고 안내를 받았습니다."},
+        {r:"삼상 30:16-20", t:"아말렉을 쳐서 여자·남녀노소와 아들딸들, 전리품을 하나도 남기지 않고 되찾았습니다."},
+        {r:"삼상 30:21-25", t:"뒤에 남은 200명에게도 \"나는 있는 그대로 나누어주고 없어도 있는 대로 나누어주고 없든지 할 수 없습니다\" — 전리품을 공정하게 나누는 규례를 세웠습니다."},
+        {r:"삼상 30:26-31", t:"전리품을 유다 장로들에게 예물로 보냈습니다."}
+      ],
+      psalms:[
+        {ref:"시편 62편", type:"ctx", title:"표제 없음 — 모든 것이 무너진 자리에서 \"영혼이 잠잠히 하나님만\" 기다리는 기도(정황 연결).",
+         key:"<b>62:1</b> \"나의 영혼이 잠잠히 하나님만 바람이여 나의 구원이 그에게서 나오는도다\" · <b>62:8</b> \"백성들아 시시로 그를 의지하고 그의 앞에 마음을 토하라 하나님은 우리의 피난처시로다\""}
+      ],
+      note:"브솔은 가자 남쪽의 <b>와디 베소르(나할 베소르)</b>로, 시글락에서 서쪽으로 약 20km입니다."
+    },
+
+    { name:"헤브론 (1차 · 유다의 왕)", english_name:"Hebron (Tel Rumeida)",
+      phase:4, lat:31.5288, lng:35.1032, elevation_m:930, factor:1.25,
+      via:[[31.4100,34.7000],[31.4400,34.8300],[31.4600,34.9500],[31.4900,35.0200],[31.5200,35.0800]],
+      scripture:"삼하 2:1-4, 11; 삼상 31:1-6",
+      summary:"길보아 산에서 사울과 세 아들이 전사한 뒤, 다윗이 여호와께 물어 헤브론으로 올라갔고 유다 사람들이 거기서 기름을 부어 유다 족속의 왕으로 세웠습니다. 이때부터 7년 6개월 동안 헤브론에서 유다를 다스렸습니다.",
+      events:[
+        {r:"삼상 31:1-6", t:"블레셋과의 길보아 산 전투에서 사울과 요나단 등 세 아들이 죽었고, 사울은 자기의 칼에 엎드러졌습니다."},
+        {r:"삼상 31:8-13", t:"야베스 길르앗 사람들이 사울과 아들들의 시신을 가져다 장사하고 이레 동안 금식했습니다."},
+        {r:"삼하 1:1-16", t:"아말렉 사람의 전갈로 사울의 죽음을 알고, 다윗과 부하들이 옷을 찢고 애통하며 금식했습니다."},
+        {r:"삼하 1:17-27", t:"다윗이 사울과 요나단을 위해 \"활 노래\"(애가)를 지어 유다 자손에게 가르치라 하였습니다."},
+        {r:"삼하 2:1", t:"\"내가 유다의 한 성읍으로 올라가리이까\" 묻고 \"헤브론으로 가라\"는 응답을 받았습니다."},
+        {r:"삼하 2:2-4", t:"두 아내와 사람들을 데리고 헤브론 성읍들에 거주하니, 유다 사람들이 와서 거기서 기름을 부어 다윗을 유다 족속의 왕으로 삼았습니다."},
+        {r:"삼하 2:11", t:"헤브론에서 유다 족속의 왕이 된 기간은 <b>7년 6개월</b>이었습니다."}
+      ],
+      psalms:[
+        {ref:"시편 18편", type:"dir", title:"표제 — \"여호와께서 모든 원수와 사울의 손에서 건지신 날에 다윗이 여호와께 이 노래의 말씀을 아뢰어 이르되\" (삼하 22장에 같은 노래가 실려 있습니다)",
+         key:"<b>18:1-2</b> \"나의 힘이신 여호와여 내가 주를 사랑하나이다 여호와는 나의 반석이시요 나의 요새시요 나를 건지시는 이시요\" · <b>18:50</b> \"여호와께서 그의 왕에게 큰 구원을 주시며 기름 부음 받은 자에게 인자를 베푸심이여\"\""}
+      ],
+      note:"삼하 5:4에 따르면 다윗이 왕이 될 때 <b>30세</b>였습니다. 헤브론은 유다 산지 최고의 도시 중 하나(해발 약 930m)이며, 아브라함·이삭·야곱의 매장지 마크펠라가 있습니다."
+    },
+
+    { name:"헤브론 (2차 · 온 이스라엘의 왕)", english_name:"Hebron",
+      phase:4, lat:31.5247, lng:35.1108, elevation_m:930, factor:1.3, via:[],
+      scripture:"삼하 5:1-5; 3:1-5",
+      summary:"사울의 집과 다윗의 집 사이의 오랜 전쟁에서 다윗이 점점 강성했고, 이스바알이 죽은 뒤 온 이스라엘의 장로들이 헤브론에 모여 여호와 앞에서 기름을 부어 다윗을 온 이스라엘의 왕으로 삼았습니다. 만 30세에 왕이 되어 40년을 다스렸습니다.",
+      events:[
+        {r:"삼하 3:1", t:"사울의 집과 다윗의 집 사이에 전쟁이 오래되었으나 다윗은 점점 강성하고 사울의 집은 점점 약해졌습니다."},
+        {r:"삼하 3:2-5", t:"헤브론에서 압살롬을 비롯한 아들들이 태어났습니다."},
+        {r:"삼하 3:17-21", t:"아브넬이 이스라엘 장로들과 협상해 다윗에게로 돌아섰습니다."},
+        {r:"삼하 3:26-30", t:"요압이 아브넬을 속여 죽였고, 다윗은 \"이 사람의 피가 영원히 요압에게 돌아갈 것이다\" 하며 애통했습니다."},
+        {r:"삼하 4:1-12", t:"이스바알이 그의 군장들에게 죽임을 당했고, 다윗은 살해자들을 처형하고 이스바알의 머리를 헤브론에 장사했습니다."},
+        {r:"삼하 5:1-3", t:"이스라엘 모든 지파의 장로들이 헤브론에 모여 \"우리는 왕의 뼈와 살\"이라 하며 여호와 앞에서 기름을 부어 다윗을 이스라엘의 왕으로 삼았습니다."},
+        {r:"삼하 5:4-5", t:"다윗이 왕이 될 때 30세였고, 헤브론에서 7년 6개월, 예루살렘에서 33년, 도합 40년을 다스렸습니다."},
+        {r:"대상 12:23-40", t:"헤브론에 모인 이스라엘 군대의 명단과 사흘간의 잔치가 기록됩니다."}
+      ],
+      psalms:[
+        {ref:"시편 133편", type:"dir", title:"표제 — \"다윗의 시 곧 성전에 올라가는 노래\"",
+         key:"<b>133:1</b> \"보라 형제가 연합하여 동거함이 어찌 그리 선하고 아름다운고\" · <b>133:3</b> \"거기서 여호와께서 복을 명령하셨나니 곧 영원한 생명이니라\""}
+      ],
+      note:"1차 기름부음(유다 지파)과 2차 기름부음(온 이스라엘)은 같은 성읍에서 7년 6개월의 간격을 두고 이루어졌습니다. 지도에서는 텔 루메이다와 마크펠라 일대를 나누어 표시했습니다."
+    },
+
+    { name:"예루살렘 · 시온 산성", english_name:"Jerusalem (City of David)",
+      phase:4, lat:31.7738, lng:35.2352, elevation_m:700, factor:1.22,
+      via:[[31.5900,35.1400],[31.6700,35.1800],[31.7300,35.2150]],
+      scripture:"삼하 5:6-10; 6:1-19; 7:1-17",
+      summary:"다윗이 온 이스라엘과 함께 예루살렘을 쳤고, 여부스 사람들의 조롱을 뚫고 성을 취해 \"시온 산성\" 곧 다윗성이라 불렀습니다. 이어 언약궤를 옮겨 예루살렘을 예배의 중심으로 삼았고, 하나님이 나단을 통해 다윗 왕조의 영원을 약속하셨습니다.",
+      events:[
+        {r:"삼하 5:6-8", t:"여부스 사람들이 \"너는 이리로 들어오지 못하리라\" 조롱했으나, 다윗이 수로를 통해 성을 쳐서 취했습니다."},
+        {r:"삼하 5:9-10", t:"다윗이 산성에 거주하며 그 성을 \"다윗성\"이라 불렀고, 만군의 하나님 여호와께서 함께 계셔 점점 강성해졌습니다."},
+        {r:"삼하 5:11-12", t:"두로 왕 히람이 백향목과 목수와 석수를 보내 다윗의 궁을 지었습니다."},
+        {r:"삼하 6:1-19", t:"언약궤를 예루살렘으로 옮겼습니다. 우사의 죽음 뒤 오벧에돔의 집에서 석 달을 머문 뒤, 다윗이 여호와 앞에서 힘을 다해 춤추었습니다."},
+        {r:"삼하 7:1-17", t:"나단을 통해 \"네 집과 네 나라가 영원히 견고하리라\"는 다윗 언약을 받았습니다."}
+      ],
+      psalms:[
+        {ref:"시편 2편", type:"ctx", title:"표제 없음 — 여호와께서 시온에 왕을 세우신다는 시온 왕권의 시(정황 연결).",
+         key:"<b>2:6</b> \"내가 내 왕을 내 거룩한 산 시온에 세웠다 하시도다\" · <b>2:7</b> \"너는 내 아들이라 오늘 내가 너를 낳았도다\""},
+        {ref:"시편 24편", type:"ctx", title:"표제 — \"다윗의 시\" · 전승은 언약궤를 예루살렘으로 모실 때 부른 노래로 읽습니다(정황 연결).",
+         key:"<b>24:7-8</b> \"문들아 너희 머리를 들지어다 영원한 문들아 들릴지어다 영광의 왕이 들어가시리로다 영광의 왕이 누구시냐 강하고 능한 여호와시요\""}
+      ],
+      note:"다윗성은 성전 산보다 낮은 남동쪽 능선 <b>오벨 언덕(해발 약 700m)</b>입니다. 이로써 기브아의 궁정에서 쫓겨난 목동이 시온의 왕좌에 앉기까지의 여정이 닫힙니다."
+    }
+  ];
+
+  const N = RAW.length;
+  const P = RAW.map((p,i)=>Object.assign({}, p, {order:i+1, phaseColor: PHASES[p.phase].color}));
+
+  /* =========================================================
+     2. 거리 · 고도 · 도보 시간 계산
+     ========================================================= */
+  const R = 6371.0088;
+  const rad = d => d*Math.PI/180;
+
+  function haversine(lat1,lng1,lat2,lng2){
+    const dLat = rad(lat2-lat1), dLng = rad(lng2-lng1);
+    const a = Math.sin(dLat/2)**2 + Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLng/2)**2;
+    return 2*R*Math.asin(Math.min(1,Math.sqrt(a)));
+  }
+
+  function coordsTo(i){
+    const p = P[i];
+    const out = [];
+    if(i>0) out.push([P[i-1].lat, P[i-1].lng]);
+    (p.via||[]).forEach(v=>out.push(v));
+    out.push([p.lat, p.lng]);
+    return out;
+  }
+
+  const legs = P.map((p,i)=>{
+    if(i===0) return {km:0, ascent:0, descent:0, hours:0, days:0, cum:0};
+    const cs = coordsTo(i);
+    let d = 0;
+    for(let k=1;k<cs.length;k++) d += haversine(cs[k-1][0],cs[k-1][1],cs[k][0],cs[k][1]);
+    const km = d * (p.factor || 1.18);
+    const diff = p.elevation_m - P[i-1].elevation_m;
+    const ascent = Math.max(0,diff), descent = Math.max(0,-diff);
+    const hours = km/4 + ascent/100*(10/60);
+    const days = Math.max(1, Math.ceil(km/30));
+    return {km, ascent, descent, hours, days, cum:0};
+  });
+  let cum = 0;
+  legs.forEach(l=>{ cum += l.km; l.cum = cum; });
+  const TOTAL_KM = cum;
+  const TOTAL_ELEV_GAIN = legs.reduce((s,l)=>s+l.ascent,0);
+  const PSALM_COUNT = P.reduce((s,p)=>s+(p.psalms?p.psalms.length:0),0);
+
+  function fmtKm(km){
+    if(km < 1) return Math.round(km*1000)+" m";
+    return (km<100 ? km.toFixed(1) : Math.round(km).toLocaleString("ko-KR"))+" km";
+  }
+  function fmtDur(h){
+    if(h<=0) return "–";
+    const hh = Math.floor(h), mm = Math.round((h-hh)*60);
+    if(hh===0) return mm+"분";
+    if(mm===0) return hh+"시간";
+    return hh+"시간 "+mm+"분";
+  }
+
+  /* =========================================================
+     3. 지도 초기화
+     ========================================================= */
+  const SAT = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+  const OSM = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+
+  let map, markers=[], cur=0, playing=false, playTimer=null, styleMode="sat";
+
+  const el = id => document.getElementById(id);
+
+  function showError(msg){
+    const e = el("err");
+    e.style.display = "block";
+    e.textContent = msg;
+  }
+
+  if(!window.maplibregl){
+    el("splashMsg").textContent = "지도를 불러오지 못했습니다. 네트워크를 확인해 주세요.";
+    showError("MapLibre GL JS를 불러오지 못했습니다. (CDN 차단 또는 오프라인)");
+    return;
+  }
+
+  try{
+    map = new maplibregl.Map({
+      container:"map",
+      style:{
+        version:8,
+        sources:{
+          sat:{type:"raster", tiles:[SAT], tileSize:256, maxzoom:19, attribution:"Esri, Maxar"},
+          topo:{type:"raster", tiles:[OSM], tileSize:256, maxzoom:19, attribution:"© OpenStreetMap"}
+        },
+        layers:[
+          {id:"sat", type:"raster", source:"sat", paint:{"raster-saturation":-0.12,"raster-brightness-min":0.03,"raster-contrast":0.06}},
+          {id:"topo", type:"raster", source:"topo", layout:{visibility:"none"}}
+        ]
+      },
+      center:[35.20, 31.62],
+      zoom:7.55,
+      pitch:52,
+      bearing:-6,
+      maxPitch:82,
+      antialias:true,
+      attributionControl:false,
+      fadeDuration:180
+    });
+  }catch(e){
+    showError("지도를 초기화하지 못했습니다. ("+e.message+")");
+    return;
+  }
+
+  map.addControl(new maplibregl.AttributionControl({compact:true}), "bottom-right");
+  window.__dj = {map:map, go:function(i,o){return go(i,o);}, P:P, legs:legs, total:TOTAL_KM, psalms:PSALM_COUNT};
+
+  map.on("error", function(ev){
+    if(ev && ev.error && /Failed to fetch|NetworkError/i.test(String(ev.error.message))){
+      console.warn("tile fetch issue:", ev.error.message);
+    }
+  });
+
+  const routeAll = {type:"FeatureCollection", features:[]};
+  const routeDone = {type:"FeatureCollection", features:[]};
+  const routeLast = {type:"FeatureCollection", features:[]};
+
+  function lngLat(c){ return [c[1], c[0]]; }
+  function pathCoords(from,to){
+    const out = [];
+    for(let i=from;i<=to;i++){
+      const cs = coordsTo(i);
+      cs.forEach((c,k)=>{ if(out.length && k===0) return; out.push(lngLat(c)); });
+    }
+    return out;
+  }
+
+  map.on("load", function(){
+    map.addSource("dem", {
+      type:"raster-dem",
+      tiles:["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
+      encoding:"terrarium",
+      tileSize:256,
+      maxzoom:13,
+      attribution:"DEM AWS Terrarium"
+    });
+    map.setTerrain({source:"dem", exaggeration:1.8});
+
+    map.addLayer({
+      id:"hillshade",
+      type:"hillshade",
+      source:"dem",
+      paint:{
+        "hillshade-exaggeration":0.4,
+        "hillshade-shadow-color":"#06121a",
+        "hillshade-highlight-color":"#f7e7c4",
+        "hillshade-accent-color":"#2a4a55"
+      }
+    });
+
+    try{
+      if(map.setFog) map.setFog({
+        "color":"#0d2430",
+        "high-color":"#123243",
+        "horizon-blend":0.22,
+        "space-color":"#050c12",
+        "star-intensity":0.06
+      });
+    }catch(e){ /* older renderer */ }
+
+    map.addSource("route-all", {type:"geojson", data:routeAll});
+    map.addSource("route-done", {type:"geojson", data:routeDone});
+    map.addSource("route-last", {type:"geojson", data:routeLast});
+
+    map.addLayer({
+      id:"route-all-casing", type:"line", source:"route-all",
+      layout:{"line-join":"round","line-cap":"round"},
+      paint:{"line-color":"#05141d","line-width":8,"line-opacity":0.4,"line-blur":2.5}
+    });
+    map.addLayer({
+      id:"route-all", type:"line", source:"route-all",
+      layout:{"line-join":"round","line-cap":"round"},
+      paint:{"line-color":"#ecc180","line-width":2.8,"line-opacity":0.88,"line-dasharray":[2.2,1.5]}
+    });
+    map.addLayer({
+      id:"route-done-glow", type:"line", source:"route-done",
+      layout:{"line-join":"round","line-cap":"round"},
+      paint:{"line-color":"#f4cf8c","line-width":12,"line-opacity":0.2,"line-blur":9}
+    });
+    map.addLayer({
+      id:"route-done", type:"line", source:"route-done",
+      layout:{"line-join":"round","line-cap":"round"},
+      paint:{"line-color":"#f6d79b","line-width":4.2,"line-opacity":0.95}
+    });
+    map.addLayer({
+      id:"route-last-glow", type:"line", source:"route-last",
+      layout:{"line-join":"round","line-cap":"round"},
+      paint:{"line-color":"#ffb877","line-width":17,"line-opacity":0.26,"line-blur":12}
+    });
+    map.addLayer({
+      id:"route-last", type:"line", source:"route-last",
+      layout:{"line-join":"round","line-cap":"round"},
+      paint:{"line-color":"#ffcb8e","line-width":5.6,"line-opacity":1}
+    });
+
+    P.forEach((p,i)=>{
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "mk";
+      b.style.setProperty("--pc", p.phaseColor);
+      b.innerHTML = '<span class="num">'+(i+1)+'</span><span class="lbl">'+escapeHtml(p.name)+'</span>';
+      b.setAttribute("aria-label", (i+1)+"번 "+p.name+" ("+PHASES[p.phase].label+")");
+      b.addEventListener("click", function(ev){ ev.stopPropagation(); go(i,{user:true}); });
+      const m = new maplibregl.Marker({element:b, anchor:"center"}).setLngLat([p.lng,p.lat]).addTo(map);
+      markers.push({el:b, marker:m});
+    });
+
+    drawRoutes(0);
+    hideSplash();
+    const h = parseInt((location.hash||"").replace("#",""),10);
+    go(Number.isFinite(h) && h>=1 && h<=N ? h-1 : 0, {instant:true});
+  });
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  function lineFeature(coords){
+    return {type:"Feature", properties:{}, geometry:{type:"LineString", coordinates:coords}};
+  }
+
+  function drawRoutes(i){
+    routeAll.features = [lineFeature(pathCoords(0,N-1))];
+    const doneCoords = i>0 ? pathCoords(0,i) : [];
+    routeDone.features = doneCoords.length>1 ? [lineFeature(doneCoords)] : [];
+    let lastCoords = [];
+    if(i>0) lastCoords = coordsTo(i).map(lngLat);
+    routeLast.features = lastCoords.length>1 ? [lineFeature(lastCoords)] : [];
+    if(map.getSource("route-all")) map.getSource("route-all").setData(routeAll);
+    if(map.getSource("route-done")) map.getSource("route-done").setData(routeDone);
+    if(map.getSource("route-last")) map.getSource("route-last").setData(routeLast);
+  }
+
+  /* =========================================================
+     4. 카메라 · 상태 전환
+     ========================================================= */
+  function bearingTo(a,b){
+    const φ1 = rad(a.lat), φ2 = rad(b.lat), Δλ = rad(b.lng-a.lng);
+    const y = Math.sin(Δλ)*Math.cos(φ2);
+    const x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+    return (Math.atan2(y,x)*180/Math.PI + 360) % 360;
+  }
+
+  function cardHeight(){
+    const c = el("card");
+    return c ? c.getBoundingClientRect().height : 0;
+  }
+
+  function flyToPoint(i, instant){
+    const p = P[i];
+    const prev = i>0 ? P[i-1] : null;
+    let bearing = map.getBearing();
+    if(prev) bearing = bearingTo(prev,p);
+    const km = legs[i].km;
+    let zoom = 11.2;
+    if(km > 200) zoom = 6.9;
+    else if(km > 90) zoom = 7.8;
+    else if(km > 40) zoom = 8.8;
+    else if(km > 15) zoom = 10.2;
+    else if(km > 5) zoom = 11.6;
+    else zoom = 12.6;
+
+    const isMobile = window.innerWidth < 900;
+    const pad = isMobile
+      ? {bottom: Math.min(cardHeight()+18, window.innerHeight*0.66), top: 70, left: 0, right: 0}
+      : {bottom: 200, top: 92, left: 512, right: 30};
+
+    const opts = {
+      center:[p.lng, p.lat],
+      zoom: zoom,
+      pitch: i===0 ? 52 : 57,
+      bearing: bearing,
+      padding: pad,
+      essential:true,
+      duration: instant ? 0 : 1900,
+      curve: 1.42
+    };
+    if(instant){
+      map.jumpTo({center:opts.center, zoom:opts.zoom, pitch:opts.pitch, bearing:opts.bearing, padding:pad});
+      setTimeout(function(){ alignTarget(i); }, 120);
+    }else{
+      map.flyTo(opts);
+      map.once("moveend", function(){ setTimeout(function(){ alignTarget(i); }, 90); });
+    }
+  }
+
+  function alignTarget(i){
+    const mk = markers[i];
+    if(!mk || map.isMoving()) return;
+    const r = mk.el.getBoundingClientRect();
+    const y = r.top + r.height/2;
+    const isMobile = window.innerWidth < 900;
+    const cardTop = el("card").getBoundingClientRect().top;
+    const botLimit = isMobile ? cardTop - 90 : window.innerHeight * 0.62;
+    const topLimit = isMobile ? 128 : 118;
+    let d = 0;
+    if(y > botLimit) d = Math.min(y - botLimit, window.innerHeight * 0.42);
+    else if(y < topLimit) d = -Math.min(topLimit - y, window.innerHeight * 0.42);
+    if(Math.abs(d) > 6) map.panBy([0, d], {duration: 480, essential:true});
+  }
+
+  function go(i, opt){
+    opt = opt || {};
+    i = Math.max(0, Math.min(N-1, i));
+    cur = i;
+    render();
+    drawRoutes(i);
+    flyToPoint(i, !!opt.instant);
+    if(location.hash !== "#"+(i+1)){
+      history.replaceState(null,"","#"+(i+1));
+    }
+    if(opt.user){
+      stopPlay();
+      if(window.innerWidth < 900 && isFolded()) setFold(false);
+    }
+  }
+
+  function render(){
+    const p = P[cur], l = legs[cur], ph = PHASES[p.phase];
+    el("cRank").textContent = String(cur+1).padStart(2,"0")+" / "+N;
+    el("cName").textContent = p.name;
+    el("cEn").textContent = p.english_name;
+    el("cPer").textContent = ph.label;
+    el("cPer").style.color = ph.color;
+    el("cPer").style.borderColor = ph.color+"66";
+    el("cPer").style.background = ph.color+"1f";
+    el("periodTxt").textContent = window.innerWidth < 760 ? p.order+"· "+ph.label.split("·")[0].trim() : ph.label;
+    el("periodBadge").querySelector("i").style.background = ph.color;
+    el("periodBadge").style.borderColor = ph.color+"55";
+    el("cLat").textContent = p.lat.toFixed(4)+"° N";
+    el("cLng").textContent = p.lng.toFixed(4)+"° E";
+    el("cEle").textContent = Math.round(p.elevation_m).toLocaleString("ko-KR")+" m";
+    el("cDate").textContent = ph.date;
+    el("cScript").textContent = p.scripture;
+    el("cSummary").textContent = p.summary;
+
+    if(cur===0){
+      el("bKm").textContent = "출발";
+      el("bKmSub").textContent = "여정의 시작점";
+      el("bTot").textContent = "0 km";
+      el("bTotSub").textContent = "누적 없음";
+      el("bEle").textContent = Math.round(p.elevation_m).toLocaleString("ko-KR")+" m";
+      el("bEleSub").textContent = "해발 고도";
+      el("bEleBox").className = "badge flat";
+      el("bTime").textContent = "–";
+      el("bTimeSub").textContent = "이동 없음";
+    }else{
+      el("bKm").textContent = fmtKm(l.km);
+      el("bKmSub").textContent = "도보 보정 ×"+(p.factor||1.18).toFixed(2);
+      el("bTot").textContent = fmtKm(l.cum);
+      el("bTotSub").textContent = "출발지 대비";
+      if(l.ascent>0){
+        el("bEle").textContent = "+"+Math.round(l.ascent).toLocaleString("ko-KR")+" m";
+        el("bEleSub").textContent = "오르막 상승";
+        el("bEleBox").className = "badge up";
+      }else if(l.descent>0){
+        el("bEle").textContent = "−"+Math.round(l.descent).toLocaleString("ko-KR")+" m";
+        el("bEleSub").textContent = "내리막 하강";
+        el("bEleBox").className = "badge down";
+      }else{
+        el("bEle").textContent = "0 m";
+        el("bEleSub").textContent = "고도 변화 없음";
+        el("bEleBox").className = "badge flat";
+      }
+      el("bTime").textContent = fmtDur(l.hours);
+      el("bTimeSub").textContent = l.days===1 ? "하루 30km 기준 · 당일" : "하루 30km 기준 약 "+l.days+"일";
+    }
+
+    el("card").style.setProperty("--prog", (cur/(N-1)*100).toFixed(2)+"%");
+    el("slider").value = cur;
+    el("slider").style.setProperty("--fill", (cur/(N-1)*100).toFixed(2)+"%");
+    el("sliderCur").textContent = String(cur+1);
+    el("sliderMax").textContent = String(N);
+    el("prevBtn").disabled = cur===0;
+    el("prevBtn").style.opacity = cur===0 ? .35 : 1;
+    el("nextBtn").disabled = cur===N-1;
+    el("nextBtn").style.opacity = cur===N-1 ? .35 : 1;
+
+    markers.forEach((m,i)=>{
+      const cl = "mk" + (i===cur ? " cur" : (i<cur ? " done" : ""));
+      if(m.el.className !== cl) m.el.className = cl;
+      m.el.style.zIndex = i===cur ? 8 : (i<cur ? 3 : 2);
+    });
+
+    // 사건 목록
+    const evHtml = (p.events||[]).map(function(ev){
+      return '<div class="ev"><span class="r">'+escapeHtml(ev.r)+'</span><span class="t">'+escapeHtml(ev.t)+'</span></div>';
+    }).join("");
+    el("evList").innerHTML = evHtml || '<div class="ev"><span class="t">기록 없음</span></div>';
+
+    // 시편
+    const psHtml = (p.psalms||[]).map(function(ps){
+      const cls = ps.type === "dir" ? "dir" : "ctx";
+      const lab = ps.type === "dir" ? "표제" : "정황";
+      return '<div class="ps">'+
+          '<div class="pshead"><span class="psref">'+escapeHtml(ps.ref)+'</span>'+
+          '<span class="pstype '+cls+'">'+lab+'</span></div>'+
+          '<div class="pstitle">'+escapeHtml(ps.title)+'</div>'+
+          '<div class="pskey">'+ps.key+'</div>'+
+        '</div>';
+    }).join("");
+    el("psList").innerHTML = psHtml || '<div class="ps"><div class="pstitle">표제로 지정된 시편이 없습니다.</div></div>';
+
+    el("cNote").innerHTML = p.note || "";
+
+    drawProfile();
+    renderTOCState();
+    updateHud();
+    if(window.innerWidth < 900) el("card").querySelector(".cbody").scrollTop = 0;
+  }
+
+  function updateHud(){
+    if(!map) return;
+    const c = map.getCenter();
+    el("hLat").textContent = c.lat.toFixed(4)+"°";
+    el("hLng").textContent = c.lng.toFixed(4)+"°";
+    let e = null;
+    try{
+      const raw = map.queryTerrainElevation(c);
+      const plain = map.queryTerrainElevation(c, {exaggerated:false});
+      const ex = (map.getTerrain() && map.getTerrain().exaggeration) || 1;
+      e = (raw!==null && raw!==undefined && Math.abs(raw-plain)<0.01) ? raw/ex : plain;
+      if(e===0 && Math.abs(P[cur].elevation_m) > 5) e = P[cur].elevation_m;
+    }catch(err){ e = null; }
+    if(e===null || e===undefined || !isFinite(e)) e = P[cur].elevation_m;
+    el("hEle").textContent = Math.round(e).toLocaleString("ko-KR")+" m";
+  }
+  let hudRaf = null;
+  function onMove(){
+    if(hudRaf) return;
+    hudRaf = requestAnimationFrame(()=>{ hudRaf=null; updateHud(); });
+  }
+
+  /* =========================================================
+     5. 고도 프로파일 SVG
+     ========================================================= */
+  const profileEl = el("profile");
+  function drawProfile(){
+    const w = profileEl.clientWidth || 320;
+    const h = profileEl.clientHeight || 104;
+    if(!w) return;
+    const pad = {l:36, r:10, t:14, b:16};
+    const iw = Math.max(20, w-pad.l-pad.r), ih = Math.max(20, h-pad.t-pad.b);
+    const minE = -400, maxE = 980;
+    const X = i => pad.l + (i/(N-1))*iw;
+    const Y = e => pad.t + ih - ((e-minE)/(maxE-minE))*ih;
+    const baseY = pad.t + ih;
+
+    const yv = P.map(p=>p.elevation_m);
+    const SAMP = 12;
+    const samples = [];
+    for(let i=0;i<N-1;i++){
+      const y0 = yv[Math.max(0,i-1)], y1 = yv[i], y2 = yv[i+1], y3 = yv[Math.min(N-1,i+2)];
+      const lo = Math.min(y1,y2), hi = Math.max(y1,y2);
+      for(let s=0;s<SAMP;s++){
+        const t = s/SAMP, t2 = t*t, t3 = t2*t;
+        let y = 0.5*((2*y1) + (-y0+y2)*t + (2*y0-5*y1+4*y2-y3)*t2 + (-y0+3*y1-3*y2+y3)*t3);
+        y = Math.min(hi, Math.max(lo, y));
+        samples.push({f:i+t, y:y});
+      }
+    }
+    samples.push({f:N-1, y:yv[N-1]});
+    const SX = f => pad.l + (f/(N-1))*iw;
+
+    let line = "";
+    samples.forEach((s,k)=>{ line += (k?"L":"M") + SX(s.f).toFixed(1) + " " + Y(s.y).toFixed(1) + " "; });
+    let area = "M"+SX(0).toFixed(1)+" "+baseY.toFixed(1)+" ";
+    samples.forEach(s=>{ area += "L"+SX(s.f).toFixed(1)+" "+Y(s.y).toFixed(1)+" "; });
+    area += "L"+SX(N-1).toFixed(1)+" "+baseY.toFixed(1)+" Z";
+
+    let doneArea = "M"+SX(0).toFixed(1)+" "+baseY.toFixed(1)+" ";
+    samples.forEach(s=>{ if(s.f <= cur+0.0001) doneArea += "L"+SX(s.f).toFixed(1)+" "+Y(s.y).toFixed(1)+" "; });
+    doneArea += "L"+X(cur).toFixed(1)+" "+baseY.toFixed(1)+" Z";
+
+    const ticks = [800,400,0].map(v=>
+      '<line x1="'+pad.l+'" x2="'+(w-pad.r)+'" y1="'+Y(v).toFixed(1)+'" y2="'+Y(v).toFixed(1)+'" stroke="rgba(255,255,255,'+(v===0?0.22:0.06)+')" stroke-width="1" stroke-dasharray="'+(v===0?"4 4":"2 5")+'"/>'+
+      '<text x="'+(pad.l-5)+'" y="'+(Y(v)+3.2).toFixed(1)+'" text-anchor="end" font-size="8.5" fill="'+(v===0?"#a8b8c7":"#63758a")+'" font-family="system-ui,sans-serif">'+(v===0?"0":v)+'</text>'
+    ).join("");
+
+    let dots = "";
+    P.forEach((p,i)=>{
+      const isCur = i===cur, isDone = i<cur;
+      const r = isCur ? 4.6 : 2.4;
+      dots += '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(p.elevation_m).toFixed(1)+'" r="'+r+'" fill="'+(isCur?"#ffe6b5":p.phaseColor)+'" opacity="'+(isCur?1:(isDone?0.95:0.55))+'" stroke="'+(isCur?"#0a1620":p.phaseColor)+'" stroke-width="'+(isCur?2:0.8)+'"/>';
+    });
+
+    const cx = X(cur), cy = Y(P[cur].elevation_m);
+    const label = (P[cur].elevation_m<0?"−":"")+Math.round(Math.abs(P[cur].elevation_m)).toLocaleString("ko-KR")+"m";
+    const labelX = Math.min(Math.max(cx, pad.l+24), w-32);
+    const labelY = cy < pad.t+18 ? cy+16 : cy-8;
+
+    profileEl.setAttribute("viewBox","0 0 "+w+" "+h);
+    profileEl.innerHTML =
+      '<defs>'+
+        '<linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">'+
+          '<stop offset="0%" stop-color="#e3bb74" stop-opacity="0.30"/>'+
+          '<stop offset="100%" stop-color="#e3bb74" stop-opacity="0.02"/>'+
+        '</linearGradient>'+
+        '<linearGradient id="pg2" x1="0" y1="0" x2="0" y2="1">'+
+          '<stop offset="0%" stop-color="#ffdd9e" stop-opacity="0.42"/>'+
+          '<stop offset="100%" stop-color="#ffdd9e" stop-opacity="0.04"/>'+
+        '</linearGradient>'+
+      '</defs>'+
+      ticks+
+      '<path d="'+area+'" fill="url(#pg)"/>'+
+      '<path d="'+doneArea+'" fill="url(#pg2)"/>'+
+      '<path d="'+line+'" fill="none" stroke="#a98a54" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>'+
+      '<line x1="'+cx.toFixed(1)+'" x2="'+cx.toFixed(1)+'" y1="'+pad.t+'" y2="'+baseY+'" stroke="rgba(255,220,160,.35)" stroke-width="1" stroke-dasharray="2 3"/>'+
+      dots+
+      '<text x="'+labelX.toFixed(1)+'" y="'+labelY.toFixed(1)+'" text-anchor="middle" font-size="9" font-weight="700" fill="#ffe6b5" font-family="system-ui,sans-serif">'+label+'</text>';
+  }
+
+  profileEl.addEventListener("click", function(ev){
+    const r = profileEl.getBoundingClientRect();
+    const pad = {l:36, r:10};
+    const iw = Math.max(20, r.width-pad.l-pad.r);
+    const x = ev.clientX - r.left - pad.l;
+    const i = Math.round(Math.max(0,Math.min(1, x/iw)) * (N-1));
+    go(i, {user:true});
+  });
+
+  /* =========================================================
+     6. 컨트롤 · 목차 · 스타일
+     ========================================================= */
+  el("prevBtn").addEventListener("click", ()=>go(cur-1,{user:true}));
+  el("nextBtn").addEventListener("click", ()=>go(cur+1,{user:true}));
+  el("slider").addEventListener("input", function(ev){ go(parseInt(ev.target.value,10),{user:true}); });
+
+  function setFold(compact){
+    el("card").classList.toggle("compact", !!compact);
+    el("foldBtn").textContent = compact ? "▴" : "▾";
+    el("foldBtn").setAttribute("aria-label", compact ? "카드 펼치기" : "카드 접기");
+    setTimeout(positionAttrib, 30);
+  }
+  function isFolded(){ return el("card").classList.contains("compact"); }
+  el("foldBtn").addEventListener("click", function(){ setFold(!isFolded()); });
+  el("card").querySelector(".grip").addEventListener("click", function(){ setFold(!isFolded()); });
+
+  el("playBtn").addEventListener("click", function(){
+    if(playing) stopPlay(); else startPlay();
+  });
+
+  function startPlay(){
+    if(cur >= N-1) go(0,{instant:false});
+    playing = true;
+    el("playBtn").classList.add("on");
+    el("playLbl").textContent = "일시정지";
+    el("playBtn").querySelector(".pi").textContent = "❚❚";
+    clearInterval(playTimer);
+    playTimer = setInterval(()=>{
+      if(cur >= N-1){ stopPlay(); return; }
+      if(map && map.isMoving()) return;
+      go(cur+1);
+    }, 5200);
+  }
+  function stopPlay(){
+    playing = false;
+    clearInterval(playTimer); playTimer = null;
+    el("playBtn").classList.remove("on");
+    el("playLbl").textContent = "자동 재생";
+    el("playBtn").querySelector(".pi").textContent = "▶";
+  }
+
+  // 목차 — 단계별 묶음
+  const tocList = el("tocList");
+  const phaseKm = {};
+  P.forEach((p,i)=>{ if(i>0) phaseKm[p.phase] = (phaseKm[p.phase]||0) + legs[i].km; });
+  const phaseCount = {};
+  P.forEach(p=>{ phaseCount[p.phase] = (phaseCount[p.phase]||0)+1; });
+
+  [1,2,3,4].forEach(function(ph){
+    const hd = document.createElement("div");
+    hd.className = "tocgrp";
+    hd.innerHTML = '<i style="background:'+PHASES[ph].color+'"></i><b>'+escapeHtml(PHASES[ph].label)+'</b><span>'+phaseCount[ph]+'지점 · '+fmtKm(phaseKm[ph]||0)+'</span>';
+    tocList.appendChild(hd);
+
+    P.forEach((p,i)=>{
+      if(p.phase !== ph) return;
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "tocrow";
+      b.dataset.i = i;
+      b.style.setProperty("--pc", p.phaseColor);
+      b.innerHTML = '<span class="n">'+(i+1)+'</span>'+
+        '<span class="txt"><span class="nm">'+escapeHtml(p.name)+'</span><span class="ag">'+escapeHtml(p.scripture)+'</span></span>'+
+        (p.psalms && p.psalms.length ? '<span class="psn">시편</span>' : '')+
+        '<span class="km">'+(i===0?"출발":fmtKm(legs[i].km))+'</span>';
+      b.addEventListener("click", ()=>{ go(i,{user:true}); closeTOC(); });
+      tocList.appendChild(b);
+    });
+  });
+  el("tocSub").textContent = N+"개 지점 · 도피 → 등극 · 누적 "+fmtKm(TOTAL_KM);
+
+  function renderTOCState(){
+    Array.prototype.forEach.call(tocList.querySelectorAll(".tocrow"), function(c,i){
+      c.classList.toggle("cur", parseInt(c.dataset.i,10)===cur);
+    });
+  }
+  function openTOC(){ el("toc").classList.add("open"); }
+  function closeTOC(){ el("toc").classList.remove("open"); }
+  el("tocBtn").addEventListener("click", openTOC);
+  el("tocClose").addEventListener("click", closeTOC);
+  el("toc").addEventListener("click", function(ev){ if(ev.target === el("toc")) closeTOC(); });
+
+  const styleBtn = el("styleBtn");
+  styleBtn.addEventListener("click", function(){
+    if(!map || !map.getLayer("topo")) return;
+    styleMode = styleMode === "sat" ? "topo" : "sat";
+    map.setLayoutProperty("sat","visibility", styleMode==="sat"?"visible":"none");
+    map.setLayoutProperty("topo","visibility", styleMode==="topo"?"visible":"none");
+    if(map.getLayer("hillshade")){
+      map.setPaintProperty("hillshade","hillshade-exaggeration", styleMode==="sat"?0.4:0.18);
+    }
+    styleBtn.querySelector(".ico").textContent = styleMode==="sat" ? "🛰" : "🗺";
+    el("styleLbl").textContent = styleMode==="sat" ? "위성" : "지형";
+  });
+
+  function overviewCamera(){
+    const W = window.innerWidth, H = window.innerHeight;
+    const isMobile = W < 900;
+    const ch = cardHeight();
+    const pad = isMobile
+      ? {top:68, bottom: (isFolded()? 190 : Math.min(ch, H*0.62)+14), left:8, right:8}
+      : {top:92, bottom:48, left:482, right:36};
+    const lats = P.map(p=>p.lat), lngs = P.map(p=>p.lng);
+    const minLat = Math.min.apply(null,lats), maxLat = Math.max.apply(null,lats);
+    const minLng = Math.min.apply(null,lngs), maxLng = Math.max.apply(null,lngs);
+    const availW = Math.max(120, W-pad.left-pad.right);
+    const availH = Math.max(120, H-pad.top-pad.bottom);
+    const midLng = (minLng+maxLng)/2, midLat = (minLat+maxLat)/2;
+    const cosLat = Math.cos(rad(midLat));
+    const zx = Math.log2(availW*0.92*360/(512*(maxLng-minLng)));
+    const zy = Math.log2(availH*0.86*360*cosLat/(512*(maxLat-minLat)));
+    const z = Math.min(zx, zy, 8.4);
+    return {center:[midLng, midLat], zoom:z, pitch: isMobile?16:22, bearing:0, padding:pad};
+  }
+
+  el("ovBtn").addEventListener("click", function(){
+    stopPlay();
+    if(window.innerWidth < 900) setFold(true);
+    const cam = overviewCamera();
+    map.flyTo({
+      center: cam.center,
+      zoom: cam.zoom,
+      pitch: cam.pitch,
+      bearing: cam.bearing,
+      padding: cam.padding,
+      duration: 2200,
+      essential: true
+    });
+  });
+
+  document.addEventListener("keydown", function(ev){
+    if(ev.key === "ArrowRight"){ go(cur+1,{user:true}); }
+    else if(ev.key === "ArrowLeft"){ go(cur-1,{user:true}); }
+    else if(ev.key === " "){ ev.preventDefault(); playing?stopPlay():startPlay(); }
+    else if(ev.key === "Escape"){ closeTOC(); }
+  });
+
+  map.on("move", onMove);
+  map.on("moveend", onMove);
+  map.on("pitch", onMove);
+  map.on("idle", onMove);
+  map.on("terrain", onMove);
+  map.on("zoom", function(){
+    el("map").classList.toggle("lowzoom", map.getZoom() < 8.4);
+  });
+
+  let rzT = null;
+  window.addEventListener("resize", function(){
+    clearTimeout(rzT);
+    rzT = setTimeout(()=>{ drawProfile(); positionAttrib(); }, 180);
+  });
+
+  function positionAttrib(){
+    const ctrl = document.querySelector(".maplibregl-ctrl-bottom-right");
+    if(!ctrl) return;
+    if(window.innerWidth < 900){
+      ctrl.style.bottom = (cardHeight()+6)+"px";
+    }else{
+      ctrl.style.bottom = "6px";
+    }
+  }
+
+  function hideSplash(){
+    positionAttrib();
+    setTimeout(()=>{
+      el("splash").classList.add("hide");
+      el("splashMsg").textContent = "";
+    }, 260);
+  }
+
+  render();
+
+  setTimeout(function(){
+    if(el("splash") && !el("splash").classList.contains("hide")){
+      el("splashMsg").textContent = "3D 지형 타일을 받는 중입니다…";
+    }
+  }, 4200);
+
+})();
+</script>
+</body>
+</html>
