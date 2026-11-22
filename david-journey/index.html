@@ -1157,7 +1157,11 @@
     drawRoutes(0);
     hideSplash();
     const h = parseInt((location.hash||"").replace("#",""),10);
-    go(Number.isFinite(h) && h>=1 && h<=N ? h-1 : 0, {instant:true});
+    if(Number.isFinite(h) && h>=1 && h<=N){
+      go(h-1, {instant:true});
+    }else{
+      go(0, {instant:true, wide:true});
+    }
   });
 
   function escapeHtml(s){
@@ -1254,7 +1258,12 @@
     cur = i;
     render();
     drawRoutes(i);
-    flyToPoint(i, !!opt.instant);
+    if(opt.wide){
+      const cam = overviewCamera();
+      map.jumpTo({center:cam.center, zoom:cam.zoom, pitch:cam.pitch, bearing:cam.bearing, padding:cam.padding});
+    }else{
+      flyToPoint(i, !!opt.instant);
+    }
     if(location.hash !== "#"+(i+1)){
       history.replaceState(null,"","#"+(i+1));
     }
