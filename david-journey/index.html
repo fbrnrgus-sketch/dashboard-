@@ -366,6 +366,26 @@
   .spin .crown{font-size:26px;color:var(--gold);animation:breathe 2s ease-in-out infinite}
   @keyframes breathe{0%,100%{opacity:.45;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
   .spin p{margin:12px 0 0;font-size:11.5px;color:#9aa9b6;letter-spacing:.1em}
+  /* ---------- loading veil ---------- */
+  #load{
+    position:fixed;z-index:22;left:50%;transform:translateX(-50%) translateY(-6px);
+    top:calc(var(--hdr) + env(safe-area-inset-top,0px) + 10px);
+    display:inline-flex;align-items:center;gap:7px;
+    font-size:10.5px;font-weight:600;letter-spacing:.04em;color:#e6d8bc;
+    background:rgba(8,17,24,.86);border:1px solid rgba(227,187,116,.3);
+    border-radius:999px;padding:5px 12px;
+    box-shadow:0 6px 18px rgba(0,0,0,.4);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .3s
+  }
+  #load.on{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+  #load i{
+    width:9px;height:9px;border-radius:50%;flex:0 0 9px;
+    border:1.5px solid rgba(227,187,116,.35);border-top-color:var(--gold-hi);
+    animation:spin 1s linear infinite;display:inline-block
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
   #err{
     position:fixed;z-index:70;left:12px;right:12px;top:calc(var(--hdr) + 12px);
     display:none;padding:10px 12px;border-radius:12px;
@@ -575,6 +595,8 @@
   </div>
 </div>
 
+<div id="load"><i></i><span>3D 지형 불러오는 중…</span></div>
+
 <div id="err"></div>
 
 <div id="splash">
@@ -701,7 +723,7 @@
 
     { name:"헤렛 수풀", english_name:"Forest of Hereth",
       phase:2, lat:31.6215, lng:35.0293, elevation_m:450, factor:1.22,
-      via:[[31.7000,35.6300],[31.7600,35.5600],[31.8000,35.4600],[31.7500,35.3000],[31.6800,35.1500],[31.6400,35.0700]],
+      via:[[31.7000,35.6400],[31.7700,35.6100],[31.8100,35.5500],[31.8300,35.4700],[31.7500,35.3000],[31.6800,35.1500],[31.6400,35.0700]],
       scripture:"사무엘상 22:5",
       summary:"선지자 갓의 권고로 다윗은 모압을 떠나 헤렛 수풀로 옮겼습니다. 헤브론 산지 서쪽 가장자리의 숲으로, 유다 땅에서의 광야 은신이 여기서 시작됩니다.",
       events:[
@@ -1119,7 +1141,7 @@
     map.addLayer({
       id:"route-all", type:"line", source:"route-all",
       layout:{"line-join":"round","line-cap":"round"},
-      paint:{"line-color":"#ecc180","line-width":2.8,"line-opacity":0.88,"line-dasharray":[2.2,1.5]}
+      paint:{"line-color":"#ecc180","line-width":2.4,"line-opacity":0.72,"line-dasharray":[3,2.2]}
     });
     map.addLayer({
       id:"route-done-glow", type:"line", source:"route-done",
@@ -1614,6 +1636,26 @@
     else if(ev.key === " "){ ev.preventDefault(); playing?stopPlay():startPlay(); }
     else if(ev.key === "Escape"){ closeTOC(); }
   });
+
+  // 지형 타일 로딩 표시
+  let loadT = null, loadFailsafe = null;
+  function showLoad(){
+    if(loadT) return;
+    loadT = setTimeout(function(){ el("load").classList.add("on"); }, 650);
+  }
+  function hideLoad(){
+    clearTimeout(loadT); loadT = null;
+    clearTimeout(loadFailsafe); loadFailsafe = null;
+    el("load").classList.remove("on");
+  }
+  function loadFailsafeOn(){
+    clearTimeout(loadFailsafe);
+    loadFailsafe = setTimeout(hideLoad, 15000);
+  }
+  map.on("movestart", function(){ showLoad(); loadFailsafeOn(); });
+  map.on("moveend", function(){ if(map.loaded()) hideLoad(); });
+  map.on("idle", hideLoad);
+  map.on("sourcedata", function(){ if(map.loaded()) hideLoad(); });
 
   map.on("move", onMove);
   map.on("moveend", onMove);
