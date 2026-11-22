@@ -1602,7 +1602,7 @@
     const ch = cardHeight();
     const pad = isMobile
       ? {top:68, bottom: (isFolded()? 190 : Math.min(ch, H*0.62)+14), left:8, right:8}
-      : {top:92, bottom:48, left:482, right:36};
+      : {top:92, bottom:74, left:482, right:36};
     const lats = P.map(p=>p.lat), lngs = P.map(p=>p.lng);
     const minLat = Math.min.apply(null,lats), maxLat = Math.max.apply(null,lats);
     const minLng = Math.min.apply(null,lngs), maxLng = Math.max.apply(null,lngs);
@@ -1612,7 +1612,7 @@
     const cosLat = Math.cos(rad(midLat));
     const zx = Math.log2(availW*0.92*360/(512*(maxLng-minLng)));
     const zy = Math.log2(availH*0.86*360*cosLat/(512*(maxLat-minLat)));
-    const z = Math.min(zx, zy, 8.4);
+    const z = Math.min(zx, zy, 8.2);
     return {center:[midLng, midLat], zoom:z, pitch: isMobile?16:22, bearing:0, padding:pad};
   }
 
