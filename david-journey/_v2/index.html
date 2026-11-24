@@ -1435,7 +1435,8 @@
     const order = P.map(function(p,i){ return i; }).sort(function(a,b){
       if(a===cur) return -1;
       if(b===cur) return 1;
-      return a-b;
+      // 라벨은 높은 지점부터 — "어디가 높은지"가 먼저 보이도록
+      return P[b].elevation_m - P[a].elevation_m;
     });
 
     order.forEach(function(i){
@@ -1766,7 +1767,8 @@
     if(location.hash !== "#"+(i+1)) history.replaceState(null,"","#"+(i+1));
     if(opt.scroll){
       const body = el("pbody");
-      body.scrollTo({top: Math.max(0, el("card").offsetTop - 8), behavior: opt.instantScroll ? "auto" : "smooth"});
+      const top = el("card").getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 10;
+      body.scrollTo({top: Math.max(0, top), behavior: opt.instantScroll ? "auto" : "smooth"});
     }
     if(opt.user) stopPlay();
   }
