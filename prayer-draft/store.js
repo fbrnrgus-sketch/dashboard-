@@ -1,15 +1,13 @@
 /* ==========================================================================
-   store.js — 「두 손 모아」 데이터 계층 (초안: localStorage)
+   store.js — 「두 손 모아」 데이터 계층 (Supabase 연동)
    --------------------------------------------------------------------------
-   ▶ 서버로 바꿀 때 이 파일만 교체하면 됩니다.
-     app.js 는 아래 공개 함수만 호출하고, 모든 함수는 Promise 를 돌려줍니다.
-     Supabase 등으로 옮길 때도 같은 이름 · 같은 인자 · 같은 반환 모양을
-     유지하면 app.js 는 손대지 않아도 됩니다.
+   app.js 는 아래 공개 함수만 호출하고, 모든 함수는 Promise 를 돌려줍니다.
+   예전 localStorage 초안과 같은 이름 · 같은 인자 · 같은 반환 모양을 유지합니다.
 
        listPosts(options)          글 목록  { category, archived }
        getPost(id)                 글 하나 (댓글 포함)
        addPost(data)               글 쓰기
-       togglePray(postId)          '함께 기도했어요' 켜기/끄기
+       togglePray(postId)          '함께 기도했어요' 켜기/끄기  → { prayed, count }
        addComment(postId, data)    나눔(댓글) 달기
        markAnswered(postId, bool)  응답됨 표시
        reportPost(postId, reason)  신고
@@ -17,46 +15,35 @@
        deletePost(postId)          삭제
        getReportedPosts()          관리자: 신고가 들어온 글
        getHiddenPosts()            관리자: 가려진 글
-       getDeviceId()               이 기기 식별자 (글쓴이 본인 확인 · 중복 기도 방지)
-       resetAll()                  초안 데이터를 샘플 상태로 되돌리기 (개발용)
+       getDeviceId()               이 기기 식별자
+       resetAll()                  (서버 운영에서는 사용하지 않음)
+   관리자 로그인(추가)
+       adminSignIn(email, password) · adminSignOut() · isAdmin() · adminEmail()
 
-   ▶ 초안의 경계
-     이 파일은 브라우저 localStorage 에만 저장합니다. 그래서 지금은
-     '한 기기 · 한 브라우저'에서만 글과 댓글이 보입니다. 서버에 연결하면
-     성도들끼리 서로의 기도제목이 보이게 됩니다. 화면 위 얇은 안내 띠가
-     그 사실을 알려 주고 있으며, 서버 연결 시 app.js 에서 띠만 지우면 됩니다.
+   ▶ 보안 경계
+     글·댓글·기도·신고는 모두 Supabase 함수(RPC)를 통해서만 오갑니다.
+     표에는 익명 키로 직접 접근할 수 없고, 권한(글쓴이 본인·관리자)은
+     서버 함수 안에서 확인합니다. 화면에서 버튼을 숨기는 것은 보조 수단입니다.
+     service_role 같은 비밀 키는 이 파일에 절대 넣지 않습니다.
 
    ▶ 익명 처리
-     '이름 공개'를 끄면 이름을 아예 저장하지 않습니다(authorName = null).
-     글쓴이 본인 확인용 기기 식별자(ownerId)만 따로 보관하며 화면에는
-     나가지 않습니다.
+     '이름 공개'를 끄면 이름을 아예 저장하지 않습니다(author_name = null).
+     본인 확인용 기기 식별자(device_id)만 서버에 남고 화면에는 나가지 않습니다.
    ========================================================================== */
 
 (function () {
   'use strict';
 
-  var CFG = window.DSM_CONFIG;
-  var POSTS_KEY = 'dsm_posts_v1';
+  var CFG = window.DSM_CONFIG || {};
   var DEVICE_KEY = 'dsm_device_id';
-  var DAY = 24 * 60 * 60 * 1000;
+  var AUTH_KEY = 'dsm_auth';
+  var client = null;
+  var deviceId = null;
 
   /* ---------- 작은 도구들 ---------- */
 
-  function clone(v) {
-    return JSON.parse(JSON.stringify(v));
-  }
-
   function uid(prefix) {
     return (prefix || 'id') + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  }
-
-  function nowISO() {
-    return new Date().toISOString();
-  }
-
-  function agoISO(days, hours) {
-    var t = Date.now() - (days || 0) * DAY - (hours || 0) * 60 * 60 * 1000;
-    return new Date(t).toISOString();
   }
 
   function safeGet(k) {
@@ -67,376 +54,263 @@
     try { localStorage.setItem(k, v); return true; } catch (e) { return false; }
   }
 
+  function hasHangul(s) {
+    return /[가-힣]/.test(String(s || ''));
+  }
+
+  function friendlyMessage(err) {
+    var msg = '';
+    if (typeof err === 'string') msg = err;
+    else if (err) msg = err.message || err.error_description || err.hint || '';
+    if (!msg) return '서버와 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+    if (hasHangul(msg)) return msg;
+    if (/permission denied|row-level security|jwt|apikey|invalid api key|not authorized/i.test(msg)) {
+      return '권한이 없어 처리하지 못했습니다.';
+    }
+    if (/failed to fetch|network|timeout|load failed/i.test(msg)) {
+      return '서버와 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+    }
+    return '처리하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+  }
+
+  function notifyError(err) {
+    var message = friendlyMessage(err);
+    try {
+      document.dispatchEvent(new CustomEvent('dsm:error', { detail: { message: message } }));
+    } catch (e) {}
+    return message;
+  }
+
   /* ---------- 기기 식별자 ---------- */
 
   function getDeviceId() {
+    if (deviceId) return deviceId;
     var id = safeGet(DEVICE_KEY);
     if (!id) {
       id = uid('dev');
       safeSet(DEVICE_KEY, id);
     }
-    return id;
+    deviceId = id;
+    return deviceId;
   }
 
-  /* ---------- 저장소 읽기/쓰기 ---------- */
+  /* ---------- Supabase 클라이언트 ---------- */
 
-  function readPosts() {
-    var raw = safeGet(POSTS_KEY);
-    if (!raw) return null;
-    try {
-      var arr = JSON.parse(raw);
-      return Array.isArray(arr) ? arr : null;
-    } catch (e) {
-      return null;
+  function db() {
+    if (client) return client;
+    if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+      throw new Error('서버 라이브러리를 불러오지 못했습니다.');
     }
-  }
-
-  function writePosts(posts) {
-    safeSet(POSTS_KEY, JSON.stringify(posts));
-  }
-
-  /* ---------- 첫 실행 샘플 (가상의 이름만 사용) ---------- */
-
-  function makeComment(authorName, namePublic, body, createdISO) {
-    return {
-      id: uid('cmt'),
-      authorName: namePublic ? authorName : null,
-      namePublic: !!namePublic,
-      body: body,
-      ownerId: 'sample',
-      createdAt: createdISO
-    };
-  }
-
-  function makeSample() {
-    var cats = (CFG.CATEGORIES || []).map(function (c) { return c.id; });
-    function cat(i) { return cats[i] || 'other'; }
-
-    return [
-      {
-        id: uid('post'),
-        title: '아버지 수술이 잘 마치도록 기도 부탁드립니다',
-        body: '다음 주 화요일에 아버지가 큰 수술을 받습니다.\n의료진의 손길이 정확하고, 회복이 순조롭도록 함께 기도해 주세요.',
-        category: cat(0),
-        authorName: '김○○',
-        namePublic: true,
-        ownerId: 'sample',
-        createdAt: agoISO(0, 3),
-        answered: false,
-        answeredAt: null,
-        hidden: false,
-        hiddenByReport: false,
-        reports: [],
-        prayedBy: ['s1', 's2', 's3', 's4', 's5', 's6', 's7'],
-        comments: []
-      },
-      {
-        id: uid('post'),
-        title: '아이의 새 학기를 앞두고',
-        body: '아이가 새 학교에 잘 적응할 수 있도록, 그리고 저희 부부가 조급해지지 않도록 기도 부탁드립니다.',
-        category: cat(1),
-        authorName: null,
-        namePublic: false,
-        ownerId: 'sample',
-        createdAt: agoISO(1, 2),
-        answered: false,
-        answeredAt: null,
-        hidden: false,
-        hiddenByReport: false,
-        reports: [],
-        prayedBy: ['s1', 's2', 's3'],
-        comments: []
-      },
-      {
-        id: uid('post'),
-        title: '직장에서 지혜를 구합니다',
-        body: '여러 사람의 마음을 설득해야 하는 자리입니다. 말에 은혜가 있고, 판단이 흔들리지 않도록 기도해 주세요.',
-        category: cat(2),
-        authorName: '이○○',
-        namePublic: true,
-        ownerId: 'sample',
-        createdAt: agoISO(3, 5),
-        answered: false,
-        answeredAt: null,
-        hidden: false,
-        hiddenByReport: false,
-        reports: [],
-        prayedBy: ['s1', 's2', 's3', 's4', 's5'],
-        comments: [
-          makeComment('최○○', true, '함께 기도하겠습니다. 지혜가 있기를.', agoISO(3, 1)),
-          makeComment(null, false, '말씀하실 때 은혜가 있기를 기도합니다.', agoISO(2, 4))
-        ]
-      },
-      {
-        id: uid('post'),
-        title: '기도의 응답을 나눕니다',
-        body: '지난달 함께 기도해 주신 일이 잘 마무리되었습니다.\n기도해 주신 모든 분께 감사드립니다.',
-        category: cat(3),
-        authorName: '박○○',
-        namePublic: true,
-        ownerId: 'sample',
-        createdAt: agoISO(5, 0),
-        answered: true,
-        answeredAt: agoISO(5, 0),
-        hidden: false,
-        hiddenByReport: false,
-        reports: [],
-        prayedBy: ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9', 's10', 's11', 's12'],
-        comments: []
-      },
-      {
-        id: uid('post'),
-        title: '회복 중인 가족을 위해',
-        body: '오랜 병원 생활 끝에 집으로 돌아왔습니다. 하루하루 기운을 되찾아 가도록 기도해 주세요.',
-        category: cat(0),
-        authorName: null,
-        namePublic: false,
-        ownerId: 'sample',
-        createdAt: agoISO(38, 0),
-        answered: false,
-        answeredAt: null,
-        hidden: false,
-        hiddenByReport: false,
-        reports: [],
-        prayedBy: ['s1', 's2'],
-        comments: []
+    if (!CFG.SUPABASE_URL || !CFG.SUPABASE_ANON_KEY) {
+      throw new Error('서버 주소가 설정되지 않았습니다.');
+    }
+    client = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, {
+      auth: {
+        storageKey: AUTH_KEY,
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false
       }
-    ];
-  }
-
-  function ensurePosts() {
-    var posts = readPosts();
-    if (!posts) {
-      posts = makeSample();
-      writePosts(posts);
-    }
-    return posts;
-  }
-
-  /* ---------- 화면으로 나갈 모양 만들기 ---------- */
-
-  function decorate(p, me) {
-    var c = clone(p);
-    c.comments = (p.comments || []).slice().sort(function (a, b) {
-      return new Date(a.createdAt) - new Date(b.createdAt);
     });
-    c.prayCount = (p.prayedBy || []).length;
-    c.prayed = (p.prayedBy || []).indexOf(me) >= 0;
-    c.commentCount = c.comments.length;
-    c.reportCount = (p.reports || []).length;
-    c.reportReasons = (p.reports || []).map(function (r) { return r.reason; });
-    c.isMine = p.ownerId === me;
-    c.archived = isArchived(p);
-    // 기기 식별자 목록은 화면에 내보내지 않는다.
-    delete c.prayedBy;
-    delete c.reports;
-    delete c.ownerId;
-    return c;
+    return client;
   }
 
-  function isArchived(p) {
-    var limit = (CFG.ARCHIVE_DAYS || 30) * DAY;
-    return (Date.now() - new Date(p.createdAt).getTime()) > limit;
+  function archiveDays() {
+    var n = parseInt(CFG.ARCHIVE_DAYS, 10);
+    return isNaN(n) ? 30 : n;
   }
 
-  function findPost(posts, id) {
-    for (var i = 0; i < posts.length; i++) {
-      if (posts[i].id === id) return posts[i];
+  async function callRpc(name, args, fallback) {
+    try {
+      var res = await db().rpc(name, args);
+      if (res.error) {
+        notifyError(res.error);
+        return fallback === undefined ? null : fallback;
+      }
+      var data = res.data;
+      if (data === undefined || data === null) return fallback === undefined ? null : fallback;
+      return data;
+    } catch (e) {
+      notifyError(e);
+      return fallback === undefined ? null : fallback;
     }
-    return null;
   }
 
   /* ---------- 공개 API ---------- */
 
   async function listPosts(options) {
     var o = options || {};
-    var posts = ensurePosts();
-    var me = getDeviceId();
-    var out = posts.filter(function (p) {
-      if (!o.includeHidden && p.hidden) return false;
-      var archived = isArchived(p);
-      if (o.archived === 'only' && !archived) return false;
-      if (o.archived !== 'only' && o.archived !== 'include' && archived) return false;
-      if (o.category && o.category !== 'all' && p.category !== o.category) return false;
-      return true;
-    });
-    out.sort(function (a, b) {
-      return new Date(b.createdAt) - new Date(a.createdAt);
-    });
-    return out.map(function (p) { return decorate(p, me); });
+    return await callRpc('list_posts', {
+      p_device_id: getDeviceId(),
+      p_category: o.category || 'all',
+      p_archived: o.archived || 'exclude',
+      p_archive_days: archiveDays(),
+      p_include_hidden: !!o.includeHidden
+    }, []);
   }
 
   async function getPost(id) {
-    var posts = ensurePosts();
-    var p = findPost(posts, id);
-    if (!p) return null;
-    return decorate(p, getDeviceId());
+    if (!id) return null;
+    return await callRpc('get_post', {
+      p_id: id,
+      p_device_id: getDeviceId(),
+      p_archive_days: archiveDays()
+    }, null);
   }
 
   async function addPost(input) {
     var data = input || {};
-    var posts = ensurePosts();
-    var namePublic = !!data.namePublic;
-    var name = String(data.authorName || '').trim().slice(0, 20);
-
-    var post = {
-      id: uid('post'),
-      title: String(data.title || '').trim().slice(0, 60),
-      body: String(data.body || '').trim().slice(0, 1000),
-      category: validCategory(data.category),
-      // 익명이면 이름을 저장하지 않는다.
-      authorName: namePublic && name ? name : null,
-      namePublic: namePublic && !!name,
-      ownerId: getDeviceId(),
-      createdAt: nowISO(),
-      answered: false,
-      answeredAt: null,
-      hidden: false,
-      hiddenByReport: false,
-      reports: [],
-      prayedBy: [],
-      comments: []
-    };
-
-    posts.push(post);
-    writePosts(posts);
-    return decorate(post, getDeviceId());
+    return await callRpc('add_post', {
+      p_title: String(data.title || ''),
+      p_body: String(data.body || ''),
+      p_category: data.category || 'other',
+      p_author_name: data.namePublic ? String(data.authorName || '') : '',
+      p_name_public: !!data.namePublic,
+      p_device_id: getDeviceId(),
+      p_archive_days: archiveDays()
+    }, null);
   }
 
   async function togglePray(postId) {
-    var posts = ensurePosts();
-    var p = findPost(posts, postId);
-    if (!p) return null;
-    var me = getDeviceId();
-    p.prayedBy = p.prayedBy || [];
-    var i = p.prayedBy.indexOf(me);
-    var prayed;
-    if (i >= 0) {
-      p.prayedBy.splice(i, 1);
-      prayed = false;
-    } else {
-      p.prayedBy.push(me);
-      prayed = true;
-    }
-    writePosts(posts);
-    return { prayed: prayed, count: p.prayedBy.length };
+    if (!postId) return null;
+    return await callRpc('toggle_pray', {
+      p_post_id: postId,
+      p_device_id: getDeviceId()
+    }, null);
   }
 
   async function addComment(postId, input) {
-    var posts = ensurePosts();
-    var p = findPost(posts, postId);
-    if (!p) return null;
+    if (!postId) return null;
     var data = input || {};
-    var namePublic = !!data.namePublic;
-    var name = String(data.authorName || '').trim().slice(0, 20);
-    var comment = {
-      id: uid('cmt'),
-      authorName: namePublic && name ? name : null,
-      namePublic: namePublic && !!name,
-      body: String(data.body || '').trim().slice(0, 500),
-      ownerId: getDeviceId(),
-      createdAt: nowISO()
-    };
-    p.comments = p.comments || [];
-    p.comments.push(comment);
-    writePosts(posts);
-    return decorate(p, getDeviceId());
+    return await callRpc('add_comment', {
+      p_post_id: postId,
+      p_body: String(data.body || ''),
+      p_author_name: data.namePublic ? String(data.authorName || '') : '',
+      p_name_public: !!data.namePublic,
+      p_device_id: getDeviceId(),
+      p_archive_days: archiveDays()
+    }, null);
   }
 
   async function markAnswered(postId, answered) {
-    var posts = ensurePosts();
-    var p = findPost(posts, postId);
-    if (!p) return null;
-    p.answered = !!answered;
-    p.answeredAt = p.answered ? nowISO() : null;
-    writePosts(posts);
-    return decorate(p, getDeviceId());
+    if (!postId) return null;
+    return await callRpc('set_answered', {
+      p_post_id: postId,
+      p_answered: !!answered,
+      p_device_id: getDeviceId(),
+      p_archive_days: archiveDays()
+    }, null);
   }
 
   async function reportPost(postId, reason) {
-    var posts = ensurePosts();
-    var p = findPost(posts, postId);
-    if (!p) return null;
-    var me = getDeviceId();
-    p.reports = p.reports || [];
-
-    // 같은 기기에서는 한 번만 신고로 집계한다.
-    var already = p.reports.some(function (r) { return r.by === me; });
-    if (!already) {
-      p.reports.push({ by: me, reason: String(reason || '기타').slice(0, 40), at: nowISO() });
-    }
-
-    var threshold = CFG.REPORT_HIDE_THRESHOLD || 3;
-    if (p.reports.length >= threshold && !p.hidden) {
-      p.hidden = true;
-      p.hiddenByReport = true;
-      p.hiddenAt = nowISO();
-    }
-
-    writePosts(posts);
-    var out = decorate(p, me);
-    out.alreadyReported = already;
-    return out;
+    if (!postId) return null;
+    return await callRpc('report_post', {
+      p_post_id: postId,
+      p_reason: String(reason || '기타'),
+      p_device_id: getDeviceId(),
+      p_archive_days: archiveDays()
+    }, null);
   }
 
   async function setHidden(postId, hidden) {
-    var posts = ensurePosts();
-    var p = findPost(posts, postId);
-    if (!p) return null;
-    p.hidden = !!hidden;
-    if (!hidden) {
-      p.hiddenByReport = false;
-      p.hiddenAt = null;
-    } else {
-      p.hiddenAt = nowISO();
-    }
-    writePosts(posts);
-    return decorate(p, getDeviceId());
+    if (!postId) return null;
+    return await callRpc('set_hidden', {
+      p_post_id: postId,
+      p_hidden: !!hidden,
+      p_device_id: getDeviceId(),
+      p_archive_days: archiveDays()
+    }, null);
   }
 
   async function deletePost(postId) {
-    var posts = ensurePosts();
-    var idx = -1;
-    for (var i = 0; i < posts.length; i++) {
-      if (posts[i].id === postId) { idx = i; break; }
-    }
-    if (idx < 0) return false;
-    posts.splice(idx, 1);
-    writePosts(posts);
-    return true;
+    if (!postId) return false;
+    var ok = await callRpc('delete_post', {
+      p_post_id: postId,
+      p_device_id: getDeviceId()
+    }, false);
+    return ok === true;
   }
 
   async function getReportedPosts() {
-    var posts = ensurePosts();
-    var me = getDeviceId();
-    return posts
-      .filter(function (p) { return (p.reports || []).length > 0; })
-      .sort(function (a, b) { return (b.reports || []).length - (a.reports || []).length; })
-      .map(function (p) { return decorate(p, me); });
+    return await callRpc('admin_reported_posts', {
+      p_device_id: getDeviceId(),
+      p_archive_days: archiveDays()
+    }, []);
   }
 
   async function getHiddenPosts() {
-    var posts = ensurePosts();
-    var me = getDeviceId();
-    return posts
-      .filter(function (p) { return p.hidden; })
-      .sort(function (a, b) { return new Date(b.createdAt) - new Date(a.createdAt); })
-      .map(function (p) { return decorate(p, me); });
+    return await callRpc('admin_hidden_posts', {
+      p_device_id: getDeviceId(),
+      p_archive_days: archiveDays()
+    }, []);
   }
 
+  // 서버 운영에서는 사용하지 않습니다 (실수로 전체 글이 지워지지 않도록).
   async function resetAll() {
-    writePosts(makeSample());
-    return true;
+    return false;
   }
 
-  /* ---------- 분류 검증 ---------- */
+  /* ---------- 관리자 인증 (Supabase Auth · 이메일/비밀번호) ---------- */
 
-  function validCategory(id) {
-    var list = CFG.CATEGORIES || [];
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].id === id) return id;
+  async function isAdmin() {
+    try {
+      var s = await db().auth.getSession();
+      var session = s && s.data ? s.data.session : null;
+      if (!session) return false;
+      var res = await db().rpc('is_admin');
+      if (res.error) return false;
+      return res.data === true;
+    } catch (e) {
+      return false;
     }
-    return 'other';
+  }
+
+  async function adminEmail() {
+    try {
+      var s = await db().auth.getSession();
+      var session = s && s.data ? s.data.session : null;
+      return session && session.user ? (session.user.email || '') : '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  async function adminSignIn(email, password) {
+    var mail = String(email || '').trim();
+    var pw = String(password || '');
+    if (!mail || !pw) return { ok: false, error: '이메일과 비밀번호를 모두 적어 주세요.' };
+
+    try {
+      var res = await db().auth.signInWithPassword({ email: mail, password: pw });
+      if (res.error) {
+        var m = res.error.message || '';
+        var msg = /invalid login credentials/i.test(m)
+          ? '이메일 또는 비밀번호가 맞지 않습니다.'
+          : /email not confirmed/i.test(m)
+            ? '이메일 확인이 끝나지 않은 계정입니다.'
+            : /rate limit|too many/i.test(m)
+              ? '시도가 너무 잦습니다. 잠시 후 다시 시도해 주세요.'
+              : '로그인하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+        return { ok: false, error: msg };
+      }
+
+      var okAdmin = await isAdmin();
+      if (!okAdmin) {
+        await db().auth.signOut();
+        return { ok: false, error: '관리자 권한이 있는 계정이 아닙니다.' };
+      }
+
+      return { ok: true, email: (res.data && res.data.user && res.data.user.email) || mail };
+    } catch (e) {
+      return { ok: false, error: friendlyMessage(e) };
+    }
+  }
+
+  async function adminSignOut() {
+    try {
+      await db().auth.signOut();
+    } catch (e) {}
+    return true;
   }
 
   /* ---------- 내보내기 ---------- */
@@ -454,6 +328,10 @@
     getReportedPosts: getReportedPosts,
     getHiddenPosts: getHiddenPosts,
     getDeviceId: getDeviceId,
-    resetAll: resetAll
+    resetAll: resetAll,
+    isAdmin: isAdmin,
+    adminEmail: adminEmail,
+    adminSignIn: adminSignIn,
+    adminSignOut: adminSignOut
   };
 })();

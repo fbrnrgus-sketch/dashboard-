@@ -75,20 +75,13 @@ button {
   outline-offset: 3px;
 }
 
-/* ── 초안 안내 띠 ───────────────────────────────────────────── */
-.draft-banner {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  margin: 0;
-  padding: 8px 16px;
+/* ── 게시 안내 한 줄 ──────────────────────────────────────── */
+.board-note {
+  margin: 14px auto 0;
+  max-width: 30em;
   font-size: 12.5px;
-  line-height: 1.5;
-  letter-spacing: 0.01em;
-  text-align: center;
-  color: #EADFCB;
-  background: rgba(16, 25, 46, 0.94);
-  border-bottom: 1px solid rgba(200, 169, 106, 0.28);
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.58);
 }
 
 /* ── 레이아웃 ──────────────────────────────────────────────── */

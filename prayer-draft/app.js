@@ -358,6 +358,7 @@
       authorName: name
     });
 
+    if (!post) return;
     resetComposeForm();
     toast('기도제목을 올렸습니다. 함께 기도합니다.');
     location.hash = '#/post/' + encodeURIComponent(post.id);
@@ -500,7 +501,7 @@
 
   async function showAdmin() {
     setView('admin');
-    var ok = SS.get('dsm_admin') === 'ok';
+    var ok = await S.isAdmin();
     state.isAdmin = ok;
     $('adminGate').hidden = ok;
     $('adminPanel').hidden = !ok;
@@ -508,22 +509,41 @@
     if (ok) {
       await renderAdminPanel();
     } else {
-      $('adminPin').value = '';
+      var mail = SS.get('dsm_admin_email') || '';
+      $('adminEmail').value = mail;
+      $('adminPassword').value = '';
       $('adminError').textContent = '';
-      $('adminPin').focus();
+      (mail ? $('adminPassword') : $('adminEmail')).focus();
     }
     updateAdminLink();
   }
 
   async function submitAdmin() {
-    var v = $('adminPin').value.trim();
-    if (v !== String(CFG.ADMIN_PIN)) {
-      $('adminError').textContent = '비밀번호가 맞지 않습니다.';
-      $('adminPin').value = '';
-      $('adminPin').focus();
+    var email = $('adminEmail').value.trim();
+    var pw = $('adminPassword').value;
+    var errEl = $('adminError');
+    errEl.textContent = '';
+
+    if (!email || !pw) {
+      errEl.textContent = '이메일과 비밀번호를 모두 적어 주세요.';
       return;
     }
-    SS.set('dsm_admin', 'ok');
+
+    var btn = $('adminSubmit');
+    if (btn) { btn.disabled = true; btn.textContent = '들어가는 중…'; }
+
+    var r = await S.adminSignIn(email, pw);
+
+    if (btn) { btn.disabled = false; btn.textContent = '들어가기'; }
+
+    if (!r || !r.ok) {
+      errEl.textContent = (r && r.error) || '들어가지 못했습니다. 잠시 후 다시 시도해 주세요.';
+      $('adminPassword').value = '';
+      $('adminPassword').focus();
+      return;
+    }
+
+    SS.set('dsm_admin_email', email);
     state.isAdmin = true;
     toast('관리자 모드로 들어왔습니다.');
     await showAdmin();
@@ -724,15 +744,20 @@
         break;
 
       case 'admin-exit':
-        SS.del('dsm_admin');
-        state.isAdmin = false;
-        toast('관리자 모드를 끝냈습니다.');
-        location.hash = '#/';
+        S.adminSignOut().then(function () {
+          state.isAdmin = false;
+          toast('관리자 모드를 끝냈습니다.');
+          location.hash = '#/';
+        });
         break;
     }
   }
 
   function bindEvents() {
+    document.addEventListener('dsm:error', function (e) {
+      if (e.detail && e.detail.message) toast(e.detail.message);
+    });
+
     document.addEventListener('click', function (e) {
       var actionEl = e.target.closest('[data-action]');
       if (actionEl) {
