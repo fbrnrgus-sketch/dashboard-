@@ -346,10 +346,10 @@
     background:rgba(5,11,16,.7);border:1px solid rgba(255,255,255,.16);font-size:16px;color:#e8e2d6
   }
   #modal .x:hover{background:rgba(224,125,109,.85);color:#160b08;border-color:transparent}
-  #modal .box.video .x{
-    top:-46px;right:0;background:rgba(10,22,32,.92);border-color:rgba(255,255,255,.22);
-    box-shadow:0 6px 18px rgba(0,0,0,.45)
-  }
+  #modal .box.video{overflow:hidden}
+  #modal .box.video .x{top:7px;right:7px;background:rgba(10,22,32,.9);border-color:rgba(255,255,255,.18)}
+  .vbar{height:46px;display:flex;align-items:center;gap:7px;padding:0 14px;font-size:11.5px;font-weight:700;color:#b9c2cb;background:#0a1620;border-bottom:1px solid rgba(255,255,255,.08)}
+  .vbar i{width:6px;height:6px;border-radius:50%;background:#e07d6d;display:block;box-shadow:0 0 8px #e07d6d}
   .mbody{padding:20px 20px 22px}
   .mbody h2{margin:0 0 4px;font-size:19px;letter-spacing:-.01em}
   .mbody .lead{margin:0 0 14px;font-size:12px;color:var(--dim)}
@@ -927,7 +927,7 @@
       var id = y.getAttribute("data-vid");
       var t = y.getAttribute("data-vt") || "";
       var c = y.getAttribute("data-vc") || "";
-      openModal('<div class="ytframe"><iframe src="https://www.youtube.com/embed/' + encodeURIComponent(id) + '?autoplay=1&rel=0" title="' + esc(t) + '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>' +
+      openModal('<div class="vbar"><i></i>영상 재생</div><div class="ytframe"><iframe src="https://www.youtube.com/embed/' + encodeURIComponent(id) + '?autoplay=1&rel=0" title="' + esc(t) + '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>' +
         '<div class="ytmeta"><b>' + esc(t) + '</b>' + esc(c) + ' · YouTube에서 재생 · <a href="https://www.youtube.com/watch?v=' + encodeURIComponent(id) + '" target="_blank" rel="noopener noreferrer">새 창으로 열기</a></div>', "video");
     }
   });
