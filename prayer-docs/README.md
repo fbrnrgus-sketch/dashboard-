@@ -3,7 +3,8 @@
 교회 성도들이 기도 제목을 나누고 함께 기도하는 웹앱입니다.
 글·댓글·기도 수는 **Supabase**(Postgres)에 저장되어, 이제 기기와 상관없이 서로의 기도제목이 보입니다.
 
-- 주소: https://fbrnrgus-sketch.github.io/dashboard-/prayer-draft/
+- 주소(운영): https://dusoonmoa.netlify.app/ — Netlify, `main` 브랜치 푸시 시 자동 배포(배포 폴더 `prayer-draft`)
+- 주소(백업): https://fbrnrgus-sketch.github.io/dashboard-/prayer-draft/
 - 공개 범위: **누구나 들어올 수 있는 공개 사이트** (검색엔진 노출 허용)
 - 서버: Supabase 프로젝트 `fbrnrgus-sketch's Project` (ref `likxgtawtilzclfrbeeh`, ap-southeast-2)
 
@@ -17,6 +18,8 @@
 | `store.js` | **데이터 계층** — Supabase 함수(RPC) 호출. `app.js`가 쓰는 함수 이름·인자는 그대로 |
 | `app.js` | 화면 그리기, 입력 처리, 음성 입력, 길 찾기, 관리자 로그인 |
 | `supabase/schema.sql` | 서버 스키마(표 5개 · 함수 13개 · 권한) — SQL Editor에서 실행한 내용 그대로 |
+
+> 이 README와 `supabase/schema.sql`은 배포 폴더(`prayer-draft`) **밖** `prayer-docs/`에 있습니다. 사이트 방문자에게 내려가지 않도록 옮긴 것이라 주소는 `prayer-docs/` 기준입니다.
 
 ## 기능 체크리스트
 
