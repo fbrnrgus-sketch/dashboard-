@@ -1714,6 +1714,7 @@
     else if(km > 40) z = 9.3;
     else if(km > 15) z = 10.6;
     else if(km > 5) z = 11.7;
+    if(isMobile()) z = Math.min(z, 11.5);
     const H = el("mapwrap").clientHeight;
     return {
       center:[p.lng, p.lat],
