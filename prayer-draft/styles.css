@@ -901,6 +901,13 @@ button {
   }
 }
 
+/* 좁은 휴대폰: 오른쪽 아래 배지와 가로가 겹치는 폭에서는 버튼을 배지 위로 올린다 */
+@media (max-width: 386px) {
+  .fab {
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .site-footer {
   max-width: var(--maxw);
   margin: 0 auto;
