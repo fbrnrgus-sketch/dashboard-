@@ -884,7 +884,9 @@
     var lats = list.map(function(p){ return p.lat; });
     list.forEach(function(p){ (p.via || []).forEach(function(v){ lats.push(v[0]); lngs.push(v[1]); }); });
     var b = [[Math.min.apply(null, lngs), Math.min.apply(null, lats)], [Math.max.apply(null, lngs), Math.max.apply(null, lats)]];
-    st.map.fitBounds(b, {padding:{top:56,bottom:56,left:56,right:56}, maxZoom: st.tab === "all" ? 5.1 : 6.4, duration: instant ? 0 : 800});
+    var narrow = window.innerWidth <= 900;
+    var pad = narrow ? {top:46,bottom:66,left:38,right:38} : {top:64,bottom:104,left:64,right:64};
+    st.map.fitBounds(b, {padding:pad, maxZoom: st.tab === "all" ? 5.1 : 6.4, duration: instant ? 0 : 800});
   }
 
   /* ---------------- 재생 ---------------- */
