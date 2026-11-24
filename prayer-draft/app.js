@@ -114,6 +114,10 @@
         '" data-cat="' + esc(c.id) + '" aria-pressed="' + on + '">' + esc(c.label) + '</button>';
     });
     $('tabsInner').innerHTML = html;
+    var active = $('tabsInner').querySelector('.is-active');
+    if (active && active.scrollIntoView) {
+      active.scrollIntoView({ inline: 'center', block: 'nearest' });
+    }
   }
 
   function cardHTML(p) {
@@ -263,6 +267,12 @@
     var p = await S.getPost(id);
     if (!p) {
       toast('기도제목을 찾을 수 없습니다.');
+      location.replace('#/');
+      return;
+    }
+    // 가려진 글은 글쓴이 본인과 관리자만 볼 수 있습니다.
+    if (p.hidden && !p.isMine && !state.isAdmin) {
+      toast('가려진 기도제목입니다.');
       location.replace('#/');
       return;
     }

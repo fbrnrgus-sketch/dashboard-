@@ -158,6 +158,12 @@ button {
   transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
 
+/* 작은 휴대폰에서는 분류가 한 줄에 다 들어가도록 조금 조인다 */
+@media (max-width: 430px) {
+  .tabs-inner { gap: 6px; }
+  .tab { padding: 7px 12px; font-size: 13px; }
+}
+
 .tab:hover { background: rgba(255, 255, 255, 0.12); }
 
 .tab.is-active {
