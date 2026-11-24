@@ -1213,7 +1213,7 @@
   function calcExagg(){
     const mpp = metersPerPixel();
     const sinP = Math.max(0.10, Math.sin(rad(map.getPitch())));
-    const target = isMobile() ? 62 : 112;     // 가장 높은 지점(930m) 기둥의 목표 픽셀 길이
+    const target = isMobile() ? 72 : 112;     // 가장 높은 지점(930m) 기둥의 목표 픽셀 길이
     let k = target * mpp / (930 * sinP);
     k = Math.max(1, Math.min(60, k));
     return {k: Math.round(k*10)/10, mpp:mpp, sinP:sinP};
