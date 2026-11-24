@@ -388,14 +388,11 @@
     #aboutBtn{font-size:10.5px;padding:6px 7px}
     .cname{font-size:18px}
   }
-  body.lightmap #map::after{
-    background:radial-gradient(130% 100% at 42% 40%,rgba(255,255,255,0) 46%,rgba(18,38,50,.22) 100%)
+  body.graymap #map::after{
+    background:
+      radial-gradient(130% 100% at 42% 40%,rgba(0,0,0,0) 42%,rgba(4,10,16,.55) 100%),
+      linear-gradient(160deg,rgba(12,44,64,.55),rgba(8,26,40,.62) 60%,rgba(6,18,28,.66))
   }
-  body.lightmap .pin .lbl{background:rgba(255,255,255,.9);color:#17303c;border-color:rgba(9,30,40,.16);text-shadow:none}
-  body.lightmap .pin .dot{background:#f4f7f8;box-shadow:0 0 0 3px rgba(255,255,255,.5),0 1px 6px rgba(0,0,0,.35)}
-  body.lightmap .pin.cur .dot{background:var(--pc);color:#fff}
-  body.lightmap .maplab.sea{color:rgba(40,92,110,.5)}
-  body.lightmap .maplab.reg{color:rgba(60,76,86,.55)}
 
   @media (prefers-reduced-motion:reduce){
     *{animation-duration:.01ms!important;transition-duration:.01ms!important}
@@ -415,7 +412,7 @@
 
     <div id="hud">
       <button class="hbtn" id="fitBtn" type="button" title="전체 여정 보기"><span class="i">⤢</span> 전체</button>
-      <button class="hbtn" id="styleBtn" type="button" title="지도 스타일 전환"><span class="i">◐</span> <span id="styleLbl">밝은 지도</span></button>
+      <button class="hbtn" id="styleBtn" type="button" title="지도 스타일 전환"><span class="i">◐</span> <span id="styleLbl">단색 지도</span></button>
     </div>
 
     <div id="legend" aria-label="여정 범례"></div>
@@ -680,7 +677,7 @@
       html += '<li><button type="button" data-i="' + i + '" class="' + (i === st.idx ? "on" : "") + '" style="--pc:' + j.color + '">' +
         '<span class="num">' + (i + 1) + '</span>' +
         '<span class="nm"><b>' + esc(p.name) + '</b><span>' + esc(p.date) + '</span></span>' +
-        '<span class="rt">' + (i === 0 ? "출발" : "약 " + leg.toLocaleString("ko-KR") + "km") + '<i>' + esc(p.ref) + '</i></span></button></li>';
+        '<span class="rt">' + (i === 0 ? "출발" : (leg ? "약 " + leg.toLocaleString("ko-KR") + "km" : "여정 시작")) + '<i>' + esc(p.ref) + '</i></span></button></li>';
     });
     ol.innerHTML = html;
     ol.onclick = function(e){
@@ -699,21 +696,21 @@
     var style = {
       version: 8,
       sources: {
-        dark: {
+        sat: {
           type: "raster", tileSize: 256,
-          tiles: ["https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png","https://b.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png","https://c.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png"],
-          attribution: '지도 © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>'
+          tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+          attribution: '지도 © <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics · © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         },
-        light: {
+        gray: {
           type: "raster", tileSize: 256,
-          tiles: ["https://a.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png","https://b.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png","https://c.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png"],
-          attribution: '지도 © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>'
+          tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"],
+          attribution: '지도 © <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }
       },
       layers: [
         {id:"bg", type:"background", paint:{"background-color":"#071019"}},
-        {id:"dark", type:"raster", source:"dark"},
-        {id:"light", type:"raster", source:"light", layout:{visibility:"none"}}
+        {id:"sat", type:"raster", source:"sat", paint:{"raster-brightness-max":0.72,"raster-saturation":-0.18,"raster-contrast":0.06}},
+        {id:"gray", type:"raster", source:"gray", layout:{visibility:"none"}, paint:{"raster-brightness-max":0.85,"raster-contrast":0.08}}
       ]
     };
 
@@ -730,6 +727,7 @@
       renderWorldCopies: false
     });
     st.map = map;
+    window.__map = map;
     map.addControl(new maplibregl.NavigationControl({showCompass:false}), "bottom-right");
     map.addControl(new maplibregl.AttributionControl({compact:true}), "bottom-right");
 
@@ -925,10 +923,10 @@
   $("styleBtn").addEventListener("click", function(){
     if (!st.ready) return;
     st.light = !st.light;
-    st.map.setLayoutProperty("dark", "visibility", st.light ? "none" : "visible");
-    st.map.setLayoutProperty("light", "visibility", st.light ? "visible" : "none");
-    $("styleLbl").textContent = st.light ? "어두운 지도" : "밝은 지도";
-    document.body.classList.toggle("lightmap", st.light);
+    st.map.setLayoutProperty("sat", "visibility", st.light ? "none" : "visible");
+    st.map.setLayoutProperty("gray", "visibility", st.light ? "visible" : "none");
+    $("styleLbl").textContent = st.light ? "위성 지도" : "단색 지도";
+    document.body.classList.toggle("graymap", st.light);
   });
 
   /* ---------------- 시작 ---------------- */
