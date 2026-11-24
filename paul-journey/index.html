@@ -529,6 +529,21 @@
   var JB = {}; JOURNEYS.forEach(function(j){ JB[j.id] = j; });
   PLACES.forEach(function(p, i){ p.rank = i + 1; });
 
+  var GROUPS = {};
+  PLACES.forEach(function(p){
+    var k = p.lat.toFixed(4) + "," + p.lng.toFixed(4);
+    (GROUPS[k] = GROUPS[k] || []).push(p.id);
+  });
+  var OFFS = [[0,0],[13,-13],[13,13],[-13,-13],[-13,13],[0,-17],[0,17]];
+  var OFF = {};
+  Object.keys(GROUPS).forEach(function(k){
+    GROUPS[k].forEach(function(id, i){
+      var o = OFFS[i] || [0,0];
+      OFF[id] = o;
+      BY[id].dup = GROUPS[k].length > 1;
+    });
+  });
+
   var MAJOR = {antioch1:1, paphos:1, pisidian1:1, ephesus3:1, philippi2:1, thessalonica:1, athens:1, corinth2:1, miletus:1, caesarea4:1, malta:1, rome:1, jerusalem3:1, antioch3:1};
   var REGION_LABELS = [
     {t:"지 중 해", lat:34.2, lng:18.0, k:"sea"},
@@ -804,7 +819,7 @@
         var i = list.findIndex(function(x){ return x.id === p.id; });
         render(i < 0 ? 0 : i);
       });
-      var mk = new maplibregl.Marker({element: el, anchor: "center"}).setLngLat([p.lng, p.lat]).addTo(st.map);
+      var mk = new maplibregl.Marker({element: el, anchor: "center", offset: OFF[p.id] || [0,0]}).setLngLat([p.lng, p.lat]).addTo(st.map);
       st.markers[p.id] = {mk: mk, el: el};
     });
   }
@@ -839,7 +854,9 @@
       var inTab = (st.tab === "all") || (q.phase === st.tab);
       el.classList.toggle("dim", !inTab);
       el.classList.toggle("cur", q.id === p.id);
-      var showLbl = inTab && (st.tab !== "all" || MAJOR[q.id] || q.id === p.id);
+      var showLbl = inTab && (q.id === p.id || (st.tab === "all" ? !!MAJOR[q.id] : !q.dup));
+      var nm = el.querySelector(".dot");
+      if (nm) nm.textContent = (st.tab === "all") ? q.rank : (JB[q.phase].ids.indexOf(q.id) + 1);
       el.classList.toggle("lbl", !!showLbl);
       el.style.zIndex = (q.id === p.id) ? 8 : (inTab ? 3 : 1);
     });
