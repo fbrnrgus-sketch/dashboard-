@@ -3,462 +3,512 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#0b1620" />
+<meta name="theme-color" content="#080f15" />
 <meta name="robots" content="noindex, nofollow" />
-<meta name="description" content="이스라엘·요르단 3D 지형 위에 다윗이 요나단과 헤어져 사울을 피해 도망하고 온 이스라엘의 왕이 되기까지의 여정을 지명·사건·성경 구절·시편과 함께 담은 인터랙티브 지도." />
-<title>다윗의 도피 여정 · 3D 지도</title>
+<meta name="description" content="이스라엘·요르단 3D 지형 위에 다윗이 요나단과 헤어져 사울을 피해 도망하고 온 이스라엘의 왕이 되기까지의 여정을 지명·이동 경로·해발 고도 기둥·성경 구절·시편과 함께 담은 인터랙티브 지도." />
+<title>다윗의 도피 여정 · 좌우 분할 3D 지도</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230b1620'/%3E%3Cpath d='M30 70V34l12 8 8-12 8 12 12-8v36z' fill='%23e3bb74'/%3E%3C/svg%3E" />
 <link href="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.css" rel="stylesheet" />
 <style>
   :root{
-    --ink:#f2ece0;
-    --ink-dim:#c8bda9;
-    --ink-faint:#8e9aa6;
-    --gold:#e3bb74;
-    --gold-hi:#f8e3b6;
-    --gold-deep:#b98f45;
-    --glass:rgba(9,18,26,.82);
-    --line:rgba(227,187,116,.24);
-    --up:#f0a35e;
-    --down:#78c9c1;
+    --ink:#f1ece1;
+    --ink2:#c3bcae;
+    --ink3:#8b98a6;
+    --ink4:#6d7c8a;
+    --gold:#e8b973;
+    --goldHi:#ffdca6;
+    --goldDeep:#b0843f;
+    --panel:#0b141c;
+    --panel2:#0e1a23;
+    --line:rgba(232,185,115,.16);
+    --line2:rgba(255,255,255,.07);
     --p1:#e3bb74;
     --p2:#6fbfb3;
     --p3:#cf8259;
     --p4:#b59ce0;
-    --radius:18px;
-    --hdr:60px;
+    --sea:#78c9c1;
+    --r:14px;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;padding:0;height:100%;overflow:hidden}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#070d13}
   body{
-    background:#08121a;
     color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","맑은 고딕","Noto Sans KR",system-ui,sans-serif;
     -webkit-font-smoothing:antialiased;
-    line-height:1.45;
+    line-height:1.5;
     overscroll-behavior:none;
   }
-  button{font-family:inherit}
+  button{font-family:inherit;color:inherit}
 
-  /* ---------- map ---------- */
-  #map{position:fixed;inset:0;background:linear-gradient(180deg,#0a1822 0%,#122b38 42%,#1b3a45 68%,#2a2a24 100%)}
-  .maplibregl-canvas:focus{outline:none}
+  /* ================= layout: 좌 지도 / 우 패널 ================= */
+  #app{
+    position:fixed;inset:0;
+    display:grid;
+    grid-template-rows:52vh minmax(0,1fr);
+    grid-template-columns:100%;
+  }
+  #mapwrap{position:relative;overflow:hidden;min-height:0;min-width:0;background:#08131b}
+  #map{position:absolute;inset:0}
   #map::after{
     content:"";position:absolute;inset:0;pointer-events:none;
-    background:radial-gradient(120% 80% at 50% 42%,rgba(0,0,0,0) 40%,rgba(4,10,16,.34) 100%);
+    background:
+      radial-gradient(120% 90% at 50% 45%,rgba(0,0,0,0) 38%,rgba(4,10,16,.52) 100%),
+      linear-gradient(180deg,rgba(6,14,20,.44) 0%,rgba(6,14,20,.17) 34%,rgba(6,14,20,.19) 66%,rgba(6,14,20,.48) 100%);
   }
-  .maplibregl-ctrl-attrib{background:rgba(9,18,26,.7)!important;border-radius:8px!important;font-size:10px!important}
+  .maplibregl-canvas:focus{outline:none}
+  .maplibregl-ctrl-attrib{background:rgba(9,18,26,.72)!important;border-radius:8px!important;font-size:10px!important}
   .maplibregl-ctrl-attrib a{color:#b9c6d2!important}
-  .maplibregl-ctrl-group{background:rgba(9,18,26,.8)!important;border:1px solid var(--line)!important;border-radius:12px!important;overflow:hidden}
+  .maplibregl-ctrl-group{background:rgba(9,18,26,.82)!important;border:1px solid var(--line)!important;border-radius:12px!important;overflow:hidden}
   .maplibregl-ctrl-group button+button{border-top:1px solid var(--line)!important}
   .maplibregl-ctrl-icon{filter:invert(1) hue-rotate(180deg) brightness(1.4)}
+  .maplibregl-ctrl-scale{
+    background:rgba(9,18,26,.7)!important;border-color:rgba(232,185,115,.5)!important;
+    color:#d8d0c0!important;font-size:10px!important;border-radius:0 0 4px 4px!important
+  }
 
-  /* ---------- header ---------- */
-  #hdr{
-    position:fixed;top:0;left:0;right:0;z-index:30;
-    display:flex;align-items:center;gap:10px;
-    padding:8px 12px;
-    background:linear-gradient(180deg,rgba(6,13,19,.94) 0%,rgba(6,13,19,.72) 62%,rgba(6,13,19,0) 100%);
-    padding-top:calc(8px + env(safe-area-inset-top,0px));
-    height:calc(var(--hdr) + env(safe-area-inset-top,0px));
+  /* ================= 지도 위 오버레이 ================= */
+  #pins,#legs{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+
+  .pin{
+    position:absolute;left:0;top:0;width:0;height:0;
+    pointer-events:auto;cursor:pointer;
+    --h:60px;--c:#e3bb74;--c2:#ffe6b8;
+    will-change:transform;z-index:2;
   }
-  .brand{display:flex;align-items:center;gap:9px;min-width:0;flex:1 1 auto;overflow:hidden}
-  .brand>div{min-width:0;overflow:hidden}
-  .mark{
-    width:31px;height:31px;flex:0 0 31px;border-radius:9px;
+  .pin.done{z-index:3}
+  .pin.cur{z-index:7}
+  .pin .stem{
+    position:absolute;left:-3.5px;bottom:0;width:7px;height:var(--h);
+    border-radius:3.5px 3.5px 1px 1px;
+    background:linear-gradient(to top,color-mix(in srgb,var(--c) 62%,#0b141c) 0%,var(--c) 46%,var(--c2) 100%);
+    box-shadow:0 0 0 2px rgba(4,10,16,.62),0 0 12px color-mix(in srgb,var(--c) 60%,transparent);
+    filter:drop-shadow(0 0 2px rgba(0,0,0,.65));
+    transition:opacity .25s,box-shadow .25s;
+  }
+  .pin .stem::before{ /* 기둥 바닥의 접지 그림자 */
+    content:"";position:absolute;left:-4px;right:-4px;bottom:-2px;height:5px;border-radius:50%;
+    background:radial-gradient(closest-side,rgba(0,0,0,.55),rgba(0,0,0,0));
+  }
+  .pin .cap{
+    position:absolute;left:-5px;bottom:calc(var(--h) - 5px);width:10px;height:10px;border-radius:50%;
+    background:var(--c2);border:1.5px solid rgba(9,16,23,.9);
+    box-shadow:0 0 0 1px rgba(5,11,17,.45),0 0 12px color-mix(in srgb,var(--c2) 80%,transparent);
+    transition:opacity .25s,transform .25s;
+  }
+  .pin .base{
+    position:absolute;left:-8px;top:-8px;width:16px;height:16px;border-radius:50%;
     display:grid;place-items:center;
-    background:linear-gradient(150deg,#1d3644,#0d1c26);
-    border:1px solid rgba(227,187,116,.5);
-    color:var(--gold);font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)
+    font-size:9px;font-weight:800;line-height:1;
+    font-variant-numeric:tabular-nums;
+    background:color-mix(in srgb,var(--c) 26%,#0a141c);
+    border:1.5px solid var(--c);
+    color:var(--c2);
+    box-shadow:0 0 0 1.5px rgba(6,13,19,.8),0 2px 7px rgba(0,0,0,.55);
+    transition:transform .2s,background .2s,color .2s,border-color .2s;
   }
-  h1{margin:0;font-size:15px;font-weight:700;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  h1 em{font-style:normal;color:var(--gold)}
-  .sub{font-size:10.5px;color:var(--ink-faint);letter-spacing:.04em;white-space:nowrap;margin-top:-1px;overflow:hidden;text-overflow:ellipsis}
-  .hdr-right{display:flex;align-items:center;gap:6px;flex:0 0 auto}
-  #periodBadge{
-    display:inline-flex;align-items:center;gap:5px;
-    font-size:11px;font-weight:600;color:var(--gold-hi);
-    background:rgba(227,187,116,.12);
-    border:1px solid rgba(227,187,116,.34);
-    padding:4px 9px;border-radius:999px;white-space:nowrap;
-    max-width:44vw;overflow:hidden;text-overflow:ellipsis
+  .pin .tag{
+    position:absolute;left:0;bottom:calc(var(--h) + 7px);transform:translateX(-50%);
+    display:flex;align-items:center;gap:5px;white-space:nowrap;
+    padding:2px 7px 2px 6px;border-radius:8px;
+    background:rgba(8,16,22,.9);
+    border:1px solid color-mix(in srgb,var(--c) 46%,transparent);
+    font-size:10.5px;font-weight:700;color:#fbf2df;
+    box-shadow:0 4px 14px rgba(0,0,0,.45);
+    transition:opacity .2s;
   }
-  #periodBadge i{width:7px;height:7px;border-radius:50%;display:inline-block;flex:0 0 7px}
-  .ibtn{
-    appearance:none;cursor:pointer;color:var(--ink);
-    background:rgba(11,22,32,.8);
-    border:1px solid rgba(227,187,116,.28);
-    border-radius:10px;padding:6px 10px;font-size:11.5px;font-weight:600;
-    display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
+  .pin .tag .te{font-size:9.5px;font-weight:700;color:var(--c2);font-variant-numeric:tabular-nums;opacity:.95}
+  .pin .tag .tn{color:var(--c);font-variant-numeric:tabular-nums}
+
+  /* 상태 */
+  .pin.dim .stem{opacity:.72}
+  .pin.dim .base{opacity:.88;transform:scale(.88)}
+  .pin.dim .cap{opacity:.75}
+  .pin.dim .tag{opacity:0}
+  .pin.done .stem{opacity:.62}
+  .pin.cur .stem{box-shadow:0 0 16px color-mix(in srgb,var(--c2) 75%,transparent),0 0 34px color-mix(in srgb,var(--c) 40%,transparent)}
+  .pin.cur .base{
+    transform:scale(1.34);
+    background:var(--c2);color:#101a23;border-color:#fff6e4;
+    box-shadow:0 0 0 2px rgba(6,13,19,.85),0 0 0 5px color-mix(in srgb,var(--c) 34%,transparent),0 3px 12px rgba(0,0,0,.6)
+  }
+  .pin.cur .tag{font-size:11.5px;border-color:var(--c2);background:rgba(10,20,28,.96)}
+  .pin.hide{display:none}
+
+  /* 해수면 아래 지점 — 기둥이 아래로 자란다 */
+  .pin.neg .stem{
+    top:0;bottom:auto;border-radius:1px 1px 3px 3px;
+    height:var(--h);
+    background:repeating-linear-gradient(to bottom,color-mix(in srgb,var(--c) 80%,#0b141c) 0 5px,rgba(120,201,193,.18) 5px 9px);
+    box-shadow:0 0 10px rgba(120,201,193,.3);
+  }
+  .pin.neg .cap{bottom:auto;top:calc(var(--h) - 4.5px);background:#9fe4dc}
+  .pin.neg .tag{bottom:auto;top:calc(var(--h) + 8px)}
+  .pin.neg .base{background:rgba(18,40,48,.9)}
+
+  /* 구간 라벨 */
+  .leg{position:absolute;left:0;top:0;width:0;height:0;will-change:transform}
+  .leg .lp{
+    position:absolute;left:0;top:0;transform:translate(-50%,-50%);
+    font-size:9.5px;font-weight:700;letter-spacing:.01em;
+    font-variant-numeric:tabular-nums;white-space:nowrap;
+    color:#f3e2c4;
+    background:rgba(8,16,22,.72);
+    border:1px solid rgba(232,185,115,.26);
+    border-radius:999px;padding:1px 6px;
+    box-shadow:0 2px 8px rgba(0,0,0,.35);
+  }
+  .leg .lp i{color:var(--gold);font-style:normal;margin-right:3px;opacity:.9}
+  .leg.hide{display:none}
+
+  /* 해수면 기준선 */
+  #datum{position:absolute;left:0;right:0;top:0;pointer-events:none;height:0;opacity:0;transition:opacity .4s}
+  #datum.on{opacity:1}
+  #datum .dline{
+    position:absolute;left:0;right:0;top:0;height:1px;
+    background:linear-gradient(90deg,rgba(120,201,193,0),rgba(120,201,193,.5) 12%,rgba(120,201,193,.5) 88%,rgba(120,201,193,0));
+    box-shadow:0 0 14px rgba(120,201,193,.35);
+  }
+  #datum .dlab{
+    position:absolute;left:8px;top:-8px;
+    font-size:9px;font-weight:700;letter-spacing:.04em;color:#a9ddd7;
+    background:rgba(8,22,28,.82);border:1px solid rgba(120,201,193,.4);
+    border-radius:5px;padding:1px 5px;white-space:nowrap
+  }
+
+  /* 지도 상단 UI */
+  #mapui{position:absolute;left:10px;right:10px;top:10px;display:flex;align-items:flex-start;gap:8px;pointer-events:none;z-index:6}
+  #excChip{
+    pointer-events:auto;
+    display:inline-flex;align-items:baseline;gap:5px;
+    background:rgba(8,16,22,.82);border:1px solid rgba(232,185,115,.3);
+    border-radius:999px;padding:4px 10px;
+    font-size:9.5px;color:#cdc3b1;letter-spacing:.02em;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    box-shadow:0 4px 14px rgba(0,0,0,.35)
+  }
+  #excChip b{font-size:11px;color:var(--goldHi);font-variant-numeric:tabular-nums}
+  #mbtns{margin-left:auto;display:flex;gap:6px;pointer-events:auto}
+  .mbtn{
+    appearance:none;cursor:pointer;
+    background:rgba(9,18,26,.82);border:1px solid rgba(232,185,115,.28);
+    border-radius:10px;padding:5px 9px;font-size:10.5px;font-weight:600;
+    display:inline-flex;align-items:center;gap:4px;white-space:nowrap;
     backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
     transition:border-color .18s,background .18s
   }
-  .ibtn:hover{border-color:rgba(227,187,116,.6);background:rgba(19,36,48,.9)}
-  .ibtn:active{transform:translateY(1px)}
-  .ibtn .ico{font-size:12px;line-height:1;color:var(--gold)}
+  .mbtn:hover{border-color:rgba(232,185,115,.62);background:rgba(19,36,48,.92)}
+  .mbtn:active{transform:translateY(1px)}
+  .mbtn .ico{color:var(--gold)}
 
-  /* ---------- HUD ---------- */
-  #hud{
-    position:fixed;z-index:20;
-    top:calc(var(--hdr) + env(safe-area-inset-top,0px) + 8px);right:10px;
-    background:rgba(8,17,24,.72);
-    border:1px solid rgba(227,187,116,.22);
-    border-radius:12px;padding:7px 10px 8px;
-    font-variant-numeric:tabular-nums;
-    font-size:10.5px;color:var(--ink-dim);
-    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-    box-shadow:0 6px 20px rgba(0,0,0,.28);
-    min-width:132px;pointer-events:none
-  }
-  #hud .row{display:flex;justify-content:space-between;gap:10px;line-height:1.55}
-  #hud .k{color:#7d8c99;font-size:9.5px;letter-spacing:.06em}
-  #hud .v{color:#e8dfcd;font-weight:600}
-  #hud .v.ele{color:var(--gold-hi)}
-  #hud .hd{font-size:9px;letter-spacing:.1em;color:#6e7d8a;margin-bottom:3px;text-transform:uppercase}
-
-  /* ---------- card ---------- */
-  #card{
-    position:fixed;z-index:25;left:0;right:0;bottom:0;
-    display:flex;flex-direction:column;
-    max-height:62vh;
-    background:linear-gradient(180deg,rgba(11,21,29,.95) 0%,rgba(7,14,20,.985) 60%);
-    border-top:1px solid rgba(227,187,116,.4);
-    border-radius:20px 20px 0 0;
-    box-shadow:0 -14px 40px rgba(0,0,0,.5);
-    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-    padding-bottom:env(safe-area-inset-bottom,0px);
-    transition:max-height .25s ease;
-  }
-  #card::before{
-    content:"";position:absolute;top:-1px;left:0;height:2px;width:var(--prog,0%);
-    background:linear-gradient(90deg,var(--gold-deep),var(--gold-hi));
-    border-radius:2px;transition:width .5s ease;box-shadow:0 0 12px rgba(227,187,116,.6)
-  }
-  .grip{width:38px;height:3px;border-radius:3px;background:rgba(227,187,116,.28);margin:7px auto 0;flex:0 0 auto}
-  .cbody{overflow-y:auto;overscroll-behavior:contain;padding:0 14px 2px;flex:1 1 auto;-webkit-overflow-scrolling:touch}
-  .chead{display:flex;align-items:flex-start;gap:8px;padding:4px 14px 7px}
-  .rank{
-    font-size:10px;font-weight:700;color:var(--gold);
-    border:1px solid rgba(227,187,116,.4);border-radius:7px;
-    padding:2px 6px;margin-top:3px;font-variant-numeric:tabular-nums;letter-spacing:.02em;flex:0 0 auto
-  }
-  .names{min-width:0;flex:1}
-  .cname{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
-  .fold{
-    appearance:none;cursor:pointer;flex:0 0 auto;
-    width:26px;height:26px;border-radius:8px;margin-top:1px;
-    border:1px solid rgba(227,187,116,.3);background:rgba(255,255,255,.05);
-    color:var(--gold);font-size:11px;line-height:1;display:grid;place-items:center
-  }
-  #card.compact .cbody{display:none}
-  #card.compact{max-height:none}
-  #card.compact .ctl{padding-top:2px}
-  .cen{margin:1px 0 0;font-size:10.5px;color:var(--ink-faint);letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .cper{
-    flex:0 0 auto;font-size:10.5px;font-weight:600;color:var(--gold-hi);
-    background:rgba(227,187,116,.13);border:1px solid rgba(227,187,116,.3);
-    border-radius:8px;padding:3px 7px;margin-top:1px;text-align:center;max-width:36%
-  }
-
-  .meta{display:flex;gap:13px;margin:7px 0 0;font-size:10.5px;color:var(--ink-dim);flex-wrap:wrap}
-  .meta span{display:inline-flex;align-items:center;gap:4px}
-  .meta .n{color:#efe6d4;font-weight:600;font-variant-numeric:tabular-nums}
-  .meta .lab{color:#7f8e9b;font-size:9.5px}
-
-  .scripture{
-    display:flex;align-items:flex-start;gap:6px;margin:9px 0 0;
-    font-size:11.5px;color:#e9d3a8;
-    border-left:2px solid var(--gold-deep);padding-left:8px;
-    font-weight:600;letter-spacing:.01em;line-height:1.5
-  }
-  .scripture .ico{font-size:10px;color:var(--gold);margin-top:2px}
-
-  .summary{margin:7px 0 0;font-size:12.5px;color:#d5cdbd;line-height:1.62;word-break:keep-all}
-
-  .badges{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:11px 0 0}
-  .badge{
-    background:rgba(255,255,255,.035);
-    border:1px solid rgba(255,255,255,.07);
-    border-radius:10px;padding:6px 9px;min-width:0
-  }
-  .badge .bk{display:block;font-size:9px;letter-spacing:.08em;color:#78889a;text-transform:uppercase}
-  .badge .bv{display:block;font-size:13.5px;font-weight:700;color:#f4ecdc;font-variant-numeric:tabular-nums;line-height:1.3}
-  .badge .bs{display:block;font-size:9px;color:#8494a4;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .badge.up .bv{color:var(--up)}
-  .badge.down .bv{color:var(--down)}
-  .badge.flat .bv{color:#d9d2c4}
-
-  /* ---------- sections ---------- */
-  .sec{margin:14px 0 0}
-  .sech{display:flex;align-items:center;gap:7px;font-size:9.5px;letter-spacing:.1em;color:#8b9aa8;margin-bottom:6px;text-transform:uppercase}
-  .sech b{font-weight:700;color:#b3a389;letter-spacing:.04em;font-size:10px}
-  .sech::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.08)}
-
-  .ev{display:flex;gap:8px;padding:6px 0;border-bottom:1px dashed rgba(255,255,255,.055);font-size:11.8px;line-height:1.52;align-items:flex-start}
-  .ev:last-child{border-bottom:0;padding-bottom:2px}
-  .ev .r{
-    flex:0 0 auto;font-size:9.5px;font-weight:700;color:#d7b981;
-    background:rgba(227,187,116,.1);border:1px solid rgba(227,187,116,.22);
-    border-radius:5px;padding:1px 5px;margin-top:1px;white-space:nowrap;font-variant-numeric:tabular-nums
-  }
-  .ev .t{color:#cfc7b7;min-width:0}
-
-  .ps{
-    border:1px solid rgba(227,187,116,.18);border-radius:12px;padding:8px 10px 9px;margin-bottom:7px;
-    background:linear-gradient(160deg,rgba(227,187,116,.06),rgba(255,255,255,.012))
-  }
-  .ps:last-child{margin-bottom:0}
-  .pshead{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-  .psref{font-size:12px;font-weight:700;color:#f3e2b8;letter-spacing:.01em}
-  .pstype{font-size:8.5px;letter-spacing:.05em;padding:1px 5px;border-radius:4px;border:1px solid;font-weight:700;line-height:1.5}
-  .pstype.dir{color:#f0d79f;border-color:rgba(227,187,116,.5);background:rgba(227,187,116,.13)}
-  .pstype.ctx{color:#9fc8c2;border-color:rgba(111,191,179,.4);background:rgba(111,191,179,.1)}
-  .pstitle{font-size:10.3px;color:#94a3b1;margin-top:3px;line-height:1.45}
-  .pskey{font-size:11.4px;color:#ded5c4;margin-top:5px;line-height:1.55;padding-left:8px;border-left:2px solid rgba(227,187,116,.34)}
-  .pskey b{color:#f3e2b8;font-weight:600;font-variant-numeric:tabular-nums}
-
-  .note{font-size:9.5px;color:#7d8c99;line-height:1.55;margin:5px 0 0;padding-top:5px;border-top:1px solid rgba(255,255,255,.05)}
-  .note b{color:#93a2b0;font-weight:600}
-
-  .profwrap{margin:14px 0 2px;position:relative}
-  .profhead{display:flex;justify-content:space-between;align-items:baseline;font-size:9.5px;color:#7a8a99;letter-spacing:.06em;margin-bottom:1px}
-  .profhead b{color:#b9ab92;font-weight:600;letter-spacing:.02em}
-  #profile{display:block;width:100%;height:104px;cursor:pointer;touch-action:pan-y}
-
-  .foot{font-size:9px;color:#63717e;margin:4px 0 12px;line-height:1.55}
-
-  /* ---------- controls ---------- */
-  .ctl{
-    flex:0 0 auto;padding:8px 14px calc(10px + env(safe-area-inset-bottom,0px));
-    border-top:1px solid rgba(255,255,255,.06);
-    background:rgba(5,11,16,.6)
-  }
-  .ctlrow{display:flex;align-items:center;gap:7px}
-  .nav{
-    appearance:none;cursor:pointer;border-radius:11px;
-    border:1px solid rgba(227,187,116,.3);
-    background:rgba(19,33,44,.9);color:var(--ink);
-    height:38px;font-size:12.5px;font-weight:600;
-    display:inline-flex;align-items:center;justify-content:center;gap:5px;
-    transition:background .16s,border-color .16s
-  }
-  .nav:hover{background:rgba(28,48,62,.95);border-color:rgba(227,187,116,.55)}
-  .nav:active{transform:translateY(1px)}
-  .nav.side{width:46px;font-size:15px;color:var(--gold)}
-  .nav.play{flex:1;background:linear-gradient(150deg,rgba(227,187,116,.2),rgba(227,187,116,.08));border-color:rgba(227,187,116,.5);color:var(--gold-hi)}
-  .nav.play.on{background:linear-gradient(150deg,rgba(227,187,116,.36),rgba(227,187,116,.16))}
-  .nav .pi{font-size:11px}
-  .slider{display:flex;align-items:center;gap:8px;margin-top:8px}
-  .slider .t{font-size:9.5px;color:#7c8b98;font-variant-numeric:tabular-nums;letter-spacing:.04em;flex:0 0 auto}
-  input[type=range]{
-    -webkit-appearance:none;appearance:none;flex:1;height:22px;background:transparent;margin:0
-  }
-  input[type=range]::-webkit-slider-runnable-track{
-    height:3px;border-radius:3px;
-    background:linear-gradient(90deg,var(--gold) 0%,var(--gold) var(--fill,0%),rgba(255,255,255,.14) var(--fill,0%),rgba(255,255,255,.14) 100%)
-  }
-  input[type=range]::-moz-range-track{height:3px;border-radius:3px;background:rgba(255,255,255,.14)}
-  input[type=range]::-moz-range-progress{height:3px;border-radius:3px;background:var(--gold)}
-  input[type=range]::-webkit-slider-thumb{
-    -webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;
-    background:var(--gold-hi);border:2px solid #0b1620;margin-top:-5.5px;
-    box-shadow:0 0 0 3px rgba(227,187,116,.22),0 1px 4px rgba(0,0,0,.5)
-  }
-  input[type=range]::-moz-range-thumb{
-    width:14px;height:14px;border-radius:50%;background:var(--gold-hi);border:2px solid #0b1620;
-    box-shadow:0 0 0 3px rgba(227,187,116,.22)
-  }
-
-  /* ---------- markers ---------- */
-  .mk{
-    position:relative;width:22px;height:22px;padding:0;border-radius:50%;
-    cursor:pointer;appearance:none;
-    border:1.5px solid var(--pc,#e3bb74);
-    background:rgba(9,18,26,.82);
-    color:var(--pc,#e3bb74);font-size:9.5px;font-weight:700;line-height:1;
-    display:grid;place-items:center;
-    box-shadow:0 0 0 1.6px rgba(6,14,20,.82),0 2px 8px rgba(0,0,0,.6);
-    transition:transform .2s,border-color .2s,background .2s,color .2s;
-    font-variant-numeric:tabular-nums
-  }
-  .mk:hover{transform:scale(1.18);z-index:5;border-color:#fff6e2}
-  .mk.done{background:var(--pc,#e3bb74);color:#0c1620;border-color:rgba(255,250,235,.55)}
-  .mk.cur{
-    width:30px;height:30px;font-size:11px;
-    background:linear-gradient(150deg,#fff9ec,var(--pc,#f8e3b6));
-    color:#17222b;border-color:#fff6e2;
-    box-shadow:0 0 0 2px rgba(6,14,20,.88),0 0 0 5px rgba(227,187,116,.34),0 4px 14px rgba(0,0,0,.65);
-    z-index:6
-  }
-  .mk.cur::after{
-    content:"";position:absolute;inset:-1px;border-radius:50%;
-    border:1.5px solid rgba(248,227,182,.75);
-    animation:pulse 2.2s ease-out infinite
-  }
-  @keyframes pulse{
-    0%{transform:scale(1);opacity:.9}
-    70%{transform:scale(2.05);opacity:0}
-    100%{transform:scale(2.05);opacity:0}
-  }
-  .mk .lbl{
-    position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%) translateY(4px);
-    font-size:11px;font-weight:700;color:#fbf2df;white-space:nowrap;
-    background:rgba(8,16,22,.9);border:1px solid rgba(227,187,116,.4);
-    padding:2px 7px;border-radius:7px;pointer-events:none;
-    opacity:0;transition:opacity .25s,transform .25s
-  }
-  .mk.cur .lbl{opacity:1;transform:translateX(-50%) translateY(0)}
-  #map.lowzoom .mk:not(.cur){width:13px;height:13px;border-width:1px}
-  #map.lowzoom .mk:not(.cur) .num{display:none}
-  #map.lowzoom .mk:not(.cur):not(.done){background:rgba(240,220,180,.7)}
-
-  /* ---------- TOC ---------- */
-  #toc{
-    position:fixed;inset:0;z-index:40;display:none;
-    background:rgba(3,8,12,.55);
-    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)
-  }
-  #toc.open{display:block}
-  .tocpanel{
-    position:absolute;right:0;top:0;bottom:0;width:min(410px,90vw);
-    background:linear-gradient(180deg,#0c1820,#070f15);
-    border-left:1px solid var(--line);
-    box-shadow:-16px 0 48px rgba(0,0,0,.55);
-    display:flex;flex-direction:column;animation:slidein .26s ease
-  }
-  @keyframes slidein{from{transform:translateX(24px);opacity:.4}to{transform:translateX(0);opacity:1}}
-  .tochead{display:flex;align-items:center;justify-content:space-between;padding:14px 14px 10px;border-bottom:1px solid rgba(255,255,255,.07);gap:10px}
-  .tochead h2{margin:0;font-size:13.5px;font-weight:700;letter-spacing:.02em}
-  .tochead h2 small{display:block;font-size:10px;color:var(--ink-faint);font-weight:400;margin-top:2px;letter-spacing:.04em}
-  .toclist{overflow-y:auto;padding:6px 8px calc(14px + env(safe-area-inset-bottom,0px));flex:1}
-  .tocgrp{display:flex;align-items:center;gap:7px;padding:11px 8px 5px;font-size:9.5px;letter-spacing:.09em;color:#8b9aa8;text-transform:uppercase}
-  .tocgrp i{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
-  .tocgrp b{color:#c2b393;font-weight:700;letter-spacing:.03em;font-size:10px;text-transform:none}
-  .tocgrp span{margin-left:auto;font-variant-numeric:tabular-nums;letter-spacing:.02em;text-transform:none;font-size:9.5px}
-  .tocrow{
-    width:100%;text-align:left;appearance:none;cursor:pointer;
-    display:flex;gap:10px;align-items:center;
-    background:transparent;border:1px solid transparent;border-radius:11px;
-    padding:8px 9px;color:var(--ink);margin-bottom:2px
-  }
-  .tocrow:hover{background:rgba(255,255,255,.05)}
-  .tocrow.cur{background:rgba(227,187,116,.12);border-color:rgba(227,187,116,.35)}
-  .tocrow .n{
-    flex:0 0 22px;height:22px;border-radius:50%;display:grid;place-items:center;
-    font-size:9.5px;font-weight:700;color:var(--pc,#c9bda6);
-    border:1px solid var(--pc,#e3bb74);font-variant-numeric:tabular-nums
-  }
-  .tocrow.cur .n{background:var(--pc,#e3bb74);color:#17222b}
-  .tocrow .txt{min-width:0;flex:1}
-  .tocrow .nm{display:block;font-size:12.5px;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .tocrow .ag{display:block;font-size:10px;color:#8b9aa7;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .tocrow .km{font-size:10px;color:#7f8e9b;font-variant-numeric:tabular-nums;flex:0 0 auto}
-  .tocrow .psn{flex:0 0 auto;font-size:9px;color:#d7b981;border:1px solid rgba(227,187,116,.3);border-radius:4px;padding:0 4px;line-height:15px}
-
-  /* ---------- splash / error ---------- */
-  #splash{
-    position:fixed;inset:0;z-index:60;display:grid;place-items:center;
-    background:radial-gradient(80% 60% at 50% 40%,#11242f 0%,#060d13 100%);
-    transition:opacity .55s ease,visibility .55s
-  }
-  #splash.hide{opacity:0;visibility:hidden}
-  .spin{text-align:center}
-  .spin .crown{font-size:26px;color:var(--gold);animation:breathe 2s ease-in-out infinite}
-  @keyframes breathe{0%,100%{opacity:.45;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
-  .spin p{margin:12px 0 0;font-size:11.5px;color:#9aa9b6;letter-spacing:.1em}
-  /* ---------- loading veil ---------- */
-  #load{
-    position:fixed;z-index:22;left:50%;transform:translateX(-50%) translateY(-6px);
-    top:calc(var(--hdr) + env(safe-area-inset-top,0px) + 10px);
-    display:inline-flex;align-items:center;gap:7px;
-    font-size:10.5px;font-weight:600;letter-spacing:.04em;color:#e6d8bc;
-    background:rgba(8,17,24,.86);border:1px solid rgba(227,187,116,.3);
-    border-radius:999px;padding:5px 12px;
-    box-shadow:0 6px 18px rgba(0,0,0,.4);
+  /* 지도 하단 범례 */
+  #legend{
+    position:absolute;left:10px;bottom:34px;z-index:5;
+    background:rgba(8,16,22,.8);border:1px solid rgba(232,185,115,.2);
+    border-radius:11px;padding:7px 9px 6px;
     backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    max-width:min(212px,52%);
+    box-shadow:0 6px 18px rgba(0,0,0,.3)
+  }
+  #legend .lgt{font-size:8.5px;letter-spacing:.1em;color:#8d9aa7;margin-bottom:4px}
+  #legend .lgbar{height:7px;border-radius:4px;background:linear-gradient(90deg,#2a5678 0%,#347896 17.9%,#4696a0 28.6%,#969e78 46.4%,#ce9656 64.3%,#ecb268 82.1%,#ffd68c 100%)}
+  #legend .lgn{position:relative;height:12px;margin-top:2px}
+  #legend .lgn span{position:absolute;top:0;transform:translateX(-50%);font-size:8.5px;color:#a8b4c1;font-variant-numeric:tabular-nums}
+  #legend .lgnote{font-size:8px;line-height:1.45;color:#7e8c99;margin-top:3px;border-top:1px solid rgba(255,255,255,.06);padding-top:4px}
+  #legend .lgnote b{color:#d7b981;font-variant-numeric:tabular-nums}
+
+  /* 로딩 · 오류 · 스플래시 */
+  #load{
+    position:absolute;z-index:9;left:50%;transform:translateX(-50%) translateY(-6px);
+    top:52px;
+    display:inline-flex;align-items:center;gap:7px;
+    font-size:10px;font-weight:600;letter-spacing:.04em;color:#e6d8bc;
+    background:rgba(8,17,24,.88);border:1px solid rgba(232,185,115,.3);
+    border-radius:999px;padding:4px 11px;
     opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .3s
   }
   #load.on{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
-  #load i{
-    width:9px;height:9px;border-radius:50%;flex:0 0 9px;
-    border:1.5px solid rgba(227,187,116,.35);border-top-color:var(--gold-hi);
-    animation:spin 1s linear infinite;display:inline-block
-  }
+  #load i{width:9px;height:9px;border-radius:50%;border:1.5px solid rgba(232,185,115,.35);border-top-color:var(--goldHi);animation:spin 1s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
-
   #err{
-    position:fixed;z-index:70;left:12px;right:12px;top:calc(var(--hdr) + 12px);
-    display:none;padding:10px 12px;border-radius:12px;
-    background:rgba(80,20,20,.92);border:1px solid rgba(255,140,120,.5);
-    color:#ffd9d0;font-size:11.5px;line-height:1.5
+    position:absolute;z-index:30;left:10px;right:10px;bottom:10px;display:none;
+    padding:9px 11px;border-radius:10px;
+    background:rgba(80,20,20,.94);border:1px solid rgba(255,140,120,.5);
+    color:#ffd9d0;font-size:11px;line-height:1.45
   }
+  #splash{
+    position:absolute;inset:0;z-index:20;display:grid;place-items:center;
+    background:radial-gradient(80% 60% at 50% 42%,#11242f 0%,#060d13 100%);
+    transition:opacity .5s ease,visibility .5s
+  }
+  #splash.hide{opacity:0;visibility:hidden}
+  .spin{text-align:center}
+  .spin .crown{font-size:24px;color:var(--gold);animation:breathe 2s ease-in-out infinite}
+  @keyframes breathe{0%,100%{opacity:.45;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
+  .spin p{margin:10px 0 0;font-size:11px;color:#9aa9b6;letter-spacing:.08em}
 
-  /* ---------- desktop ---------- */
+  /* ================= 오른쪽 패널 ================= */
+  #panel{
+    display:flex;flex-direction:column;min-height:0;min-width:0;
+    background:linear-gradient(180deg,#0b141c 0%,#081017 100%);
+    border-top:1px solid rgba(232,185,115,.22);
+  }
+  .phead{flex:0 0 auto;padding:9px 14px 8px;border-bottom:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(20,32,42,.5),rgba(11,20,28,.2))}
+  .ptop{display:flex;align-items:flex-start;gap:8px}
+  .ptop>div{min-width:0;flex:1}
+  h1{margin:0;font-size:14px;font-weight:700;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  h1 em{font-style:normal;color:var(--gold)}
+  .psub{font-size:9.5px;color:var(--ink3);letter-spacing:.03em;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .psub b{color:#bda67f;font-variant-numeric:tabular-nums;font-weight:600}
+  #periodBadge{
+    display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;margin-top:1px;
+    font-size:9.5px;font-weight:700;color:var(--goldHi);
+    background:rgba(232,185,115,.12);border:1px solid rgba(232,185,115,.32);
+    padding:3px 7px;border-radius:999px;white-space:nowrap;max-width:44%;overflow:hidden;text-overflow:ellipsis
+  }
+  #periodBadge i{width:6px;height:6px;border-radius:50%;flex:0 0 6px;background:var(--p1)}
+  .prog{height:4px;border-radius:3px;background:rgba(255,255,255,.08);margin-top:7px;overflow:hidden;position:relative}
+  #progFill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:3px;background:linear-gradient(90deg,var(--goldDeep),var(--goldHi));box-shadow:0 0 10px rgba(232,185,115,.5);transition:width .45s ease}
+  .pnav{display:flex;align-items:center;gap:6px;margin-top:7px}
+  .pnav button{
+    appearance:none;cursor:pointer;flex:1 1 0;min-width:0;
+    height:32px;border-radius:9px;
+    border:1px solid rgba(232,185,115,.26);background:rgba(19,33,44,.72);
+    font-size:11px;font-weight:600;color:var(--ink);
+    display:inline-flex;align-items:center;justify-content:center;gap:4px;
+    transition:background .16s,border-color .16s
+  }
+  .pnav button:hover{background:rgba(28,48,62,.92);border-color:rgba(232,185,115,.5)}
+  .pnav button:active{transform:translateY(1px)}
+  .pnav button:disabled{opacity:.34;cursor:default}
+  #playBtn{background:linear-gradient(150deg,rgba(232,185,115,.2),rgba(232,185,115,.07));border-color:rgba(232,185,115,.44);color:var(--goldHi);flex:1.4 1 0}
+  #playBtn.on{background:linear-gradient(150deg,rgba(232,185,115,.4),rgba(232,185,115,.18))}
+  .pcounter{flex:0 0 auto;font-size:10.5px;color:#93a2b0;font-variant-numeric:tabular-nums;padding:0 2px;letter-spacing:.03em}
+  .pcounter b{color:var(--goldHi);font-size:12px}
+
+  .pbody{
+    flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+    padding:12px 14px 40px;-webkit-overflow-scrolling:touch
+  }
+  .pbody::-webkit-scrollbar{width:8px}
+  .pbody::-webkit-scrollbar-thumb{background:rgba(232,185,115,.22);border-radius:4px}
+  .pbody::-webkit-scrollbar-track{background:transparent}
+
+  /* --- 현재 지점 카드 --- */
+  #card{border:1px solid rgba(232,185,115,.2);border-radius:var(--r);background:linear-gradient(170deg,rgba(232,185,115,.055),rgba(255,255,255,.012) 46%,rgba(255,255,255,0));padding:11px 12px 12px;position:relative;overflow:hidden}
+  #card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--cc,#e3bb74),transparent 88%)}
+  .chead{display:flex;align-items:flex-start;gap:8px}
+  .crank{flex:0 0 auto;font-size:10px;font-weight:800;color:var(--gold);border:1px solid rgba(232,185,115,.4);border-radius:7px;padding:2px 6px;margin-top:2px;font-variant-numeric:tabular-nums}
+  .names{min-width:0;flex:1}
+  .cname{margin:0;font-size:16.5px;font-weight:700;letter-spacing:-.01em;line-height:1.26}
+  .cen{font-size:9.5px;color:var(--ink4);letter-spacing:.02em;margin-top:1px;line-height:1.35}
+  .cchip{flex:0 0 auto;font-size:9px;font-weight:700;border-radius:7px;padding:2px 6px;margin-top:2px;max-width:34%;text-align:center;line-height:1.4}
+
+  .cmove{
+    display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+    margin-top:9px;padding:7px 9px;border-radius:9px;
+    background:rgba(10,20,28,.6);border:1px solid rgba(255,255,255,.06);
+    font-size:10.5px;color:#a9b6c2;line-height:1.4
+  }
+  .cmove .mv{color:#e9dcc4;font-weight:600}
+  .cmove .ar{color:var(--gold);font-weight:700}
+  .cmove .km{margin-left:auto;color:var(--goldHi);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .cmove .km small{color:#8b98a6;font-weight:400;font-size:9px;margin-left:3px}
+
+  .cmeta{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:10px;color:#9fabb8}
+  .cmeta span{display:inline-flex;align-items:baseline;gap:4px}
+  .cmeta .lab{color:#77869a;font-size:9px;letter-spacing:.03em}
+  .cmeta b{color:#ece2cf;font-weight:700;font-variant-numeric:tabular-nums}
+  .cmeta b.up{color:#f0a35e}
+  .cmeta b.dn{color:var(--sea)}
+
+  .cscript{
+    display:flex;align-items:flex-start;gap:6px;margin-top:9px;
+    font-size:11px;color:#e9d3a8;border-left:2px solid var(--goldDeep);padding-left:8px;font-weight:600;line-height:1.5
+  }
+  .cscript .ico{font-size:10px;margin-top:2px;color:var(--gold)}
+  .csum{margin:8px 0 0;font-size:12.3px;color:#cfc7b7;line-height:1.66;word-break:keep-all}
+
+  .csec{display:flex;align-items:center;gap:7px;font-size:9px;letter-spacing:.1em;color:#8b9aa8;margin:13px 0 5px}
+  .csec b{font-weight:700;color:#b3a389;letter-spacing:.03em;font-size:9.5px}
+  .csec::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.08)}
+
+  .ev{display:flex;gap:7px;padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.055);font-size:11.5px;line-height:1.55;align-items:flex-start}
+  .ev:last-child{border-bottom:0;padding-bottom:1px}
+  .ev .r{flex:0 0 auto;font-size:9px;font-weight:700;color:#d7b981;background:rgba(232,185,115,.1);border:1px solid rgba(232,185,115,.22);border-radius:5px;padding:1px 5px;margin-top:2px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .ev .t{color:#cdc5b6;min-width:0}
+
+  .ps{border:1px solid rgba(232,185,115,.18);border-radius:11px;padding:7px 9px 8px;margin-bottom:6px;background:linear-gradient(160deg,rgba(232,185,115,.055),rgba(255,255,255,.012))}
+  .ps:last-child{margin-bottom:0}
+  .pshead{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .psref{font-size:11.5px;font-weight:700;color:#f3e2b8}
+  .pstype{font-size:8px;letter-spacing:.04em;padding:1px 5px;border-radius:4px;border:1px solid;font-weight:700;line-height:1.5}
+  .pstype.dir{color:#f0d79f;border-color:rgba(232,185,115,.5);background:rgba(232,185,115,.13)}
+  .pstype.ctx{color:#9fc8c2;border-color:rgba(111,191,179,.4);background:rgba(111,191,179,.1)}
+  .pstitle{font-size:10px;color:#94a3b1;margin-top:3px;line-height:1.45}
+  .pskey{font-size:11px;color:#ded5c4;margin-top:5px;line-height:1.55;padding-left:8px;border-left:2px solid rgba(232,185,115,.34)}
+  .pskey b{color:#f3e2b8;font-weight:600;font-variant-numeric:tabular-nums}
+
+  .cnote{font-size:9.3px;color:#7d8c99;line-height:1.58;margin:10px 0 0;padding-top:7px;border-top:1px solid rgba(255,255,255,.05)}
+  .cnote b{color:#9aa8b5;font-weight:600}
+
+  /* --- 이 지명을 다룬 영상 --- */
+  .csec em{margin-left:auto;font-style:normal;font-size:8.5px;color:#6f7d8a;letter-spacing:.02em}
+  .ytcard{
+    display:grid;grid-template-columns:92px minmax(0,1fr);gap:9px;align-items:center;
+    text-decoration:none;color:inherit;
+    border:1px solid rgba(255,255,255,.08);border-radius:10px;
+    padding:5px;margin-bottom:6px;background:rgba(255,255,255,.022);
+    transition:border-color .16s,background .16s
+  }
+  .ytcard:hover{border-color:rgba(232,185,115,.5);background:rgba(232,185,115,.07)}
+  .ytcard:active{transform:translateY(1px)}
+  .ytthumb{
+    position:relative;width:92px;height:52px;border-radius:7px;overflow:hidden;
+    background:linear-gradient(150deg,#16242f,#0d1720);display:grid;place-items:center;flex:0 0 auto
+  }
+  .ytthumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .ytthumb::after{content:"YouTube";font-size:8px;letter-spacing:.04em;color:#5f7385}
+  .ytthumb img + .ytplay{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:12px;text-shadow:0 1px 4px rgba(0,0,0,.7)}
+  .ytthumb img + .ytplay span{
+    width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
+    background:rgba(200,40,40,.88);font-size:9px;line-height:1
+  }
+  .yttxt{min-width:0}
+  .yttitle{
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+    font-size:10.6px;line-height:1.4;color:#e8dfce;font-weight:600;word-break:keep-all
+  }
+  .ytch{display:block;font-size:9px;color:#8593a2;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ytmore{
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    margin-top:3px;padding:7px 8px;border-radius:9px;text-decoration:none;
+    border:1px dashed rgba(232,185,115,.34);background:rgba(232,185,115,.05);
+    color:#e2c99c;font-size:10.4px;font-weight:600;
+    transition:background .16s,border-color .16s
+  }
+  .ytmore:hover{background:rgba(232,185,115,.13);border-color:rgba(232,185,115,.6);border-style:solid}
+  .ytmore .ar{color:var(--gold)}
+  .ytnone{font-size:9.8px;color:#8593a2;line-height:1.5;margin:0 0 6px}
+
+  /* --- 여정 목록 --- */
+  .jhead{display:flex;align-items:baseline;gap:7px;margin:16px 0 2px}
+  .jhead h3{margin:0;font-size:11.5px;font-weight:700;letter-spacing:.04em;color:#d9cfbd}
+  .jhead span{font-size:9px;color:#7c8b98;margin-left:auto}
+  .jgroup{position:relative;margin-top:10px;padding-left:0}
+  .jgroup::before{content:"";position:absolute;left:15px;top:24px;bottom:4px;width:1px;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.04))}
+  .jphase{display:flex;align-items:center;gap:7px;font-size:9px;letter-spacing:.06em;color:#8b9aa8;padding:0 0 4px}
+  .jphase i{width:7px;height:7px;border-radius:50%;flex:0 0 7px}
+  .jphase b{color:#c2b393;font-weight:700;font-size:9.5px;letter-spacing:.02em}
+  .jphase em{margin-left:auto;font-style:normal;font-size:8.5px;color:#77869a;font-variant-numeric:tabular-nums}
+  .jitem{
+    width:100%;text-align:left;appearance:none;cursor:pointer;
+    display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:8px;align-items:center;
+    background:transparent;border:1px solid transparent;border-radius:10px;
+    padding:7px 7px 7px 0;color:var(--ink);position:relative;
+    transition:background .16s,border-color .16s
+  }
+  .jitem:hover{background:rgba(255,255,255,.045)}
+  .jitem.cur{background:rgba(232,185,115,.1);border-color:rgba(232,185,115,.34)}
+  .jnum{
+    width:30px;height:30px;display:grid;place-items:center;position:relative;
+    font-size:10px;font-weight:800;font-variant-numeric:tabular-nums;
+    color:var(--pc,#c9bda6);
+  }
+  .jnum i{
+    position:absolute;inset:6px;border-radius:50%;
+    border:1.5px solid var(--pc,#e3bb74);
+    background:#0b141c;
+    transition:background .16s,transform .16s
+  }
+  .jnum span{position:relative;z-index:1}
+  .jitem.cur .jnum i{background:var(--pc,#e3bb74)}
+  .jitem.cur .jnum span{color:#111c25}
+  .jitem.done .jnum i{background:color-mix(in srgb,var(--pc) 34%,#0b141c)}
+  .jtxt{min-width:0}
+  .jname{display:block;font-size:12px;font-weight:600;line-height:1.32;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .jen{display:block;font-size:9px;color:#83919f;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .jright{display:flex;flex-direction:column;align-items:flex-end;gap:1px;flex:0 0 auto;text-align:right}
+  .jele{font-size:10px;font-weight:700;color:#e4d6bd;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .jele.neg{color:var(--sea)}
+  .jkm{font-size:9px;color:#83919f;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .jkm.first{color:#7c8b98}
+
+  .pfoot{margin-top:18px;font-size:8.8px;line-height:1.6;color:#6f7d8a;border-top:1px solid rgba(255,255,255,.06);padding-top:9px}
+  .pfoot b{color:#8d9aa7;font-weight:600}
+
+  /* ================= 데스크톱: 좌우 분할 ================= */
   @media (min-width:900px){
-    :root{--hdr:64px}
-    h1{font-size:16.5px}
-    .sub{font-size:11px}
-    #card{
-      left:20px;right:auto;bottom:20px;width:472px;
-      max-height:calc(100vh - 104px);
-      border-radius:var(--radius);
-      border:1px solid rgba(227,187,116,.32);
-      box-shadow:0 24px 60px rgba(0,0,0,.55)
+    #app{
+      grid-template-columns:minmax(0,1fr) clamp(392px,36vw,688px);
+      grid-template-rows:100%;
     }
-    .cbody{padding:0 18px 4px}
-    .chead{padding:6px 18px 8px}
-    .ctl{padding:10px 18px 14px}
-    .cname{font-size:19px}
-    .summary{font-size:13px}
-    .badges{grid-template-columns:1fr 1fr 1fr 1fr}
-    #profile{height:120px}
-    #hud{font-size:11px;min-width:150px;right:18px;top:calc(var(--hdr) + 56px)}
+    #panel{border-top:0;border-left:1px solid rgba(232,185,115,.2);box-shadow:-18px 0 46px rgba(0,0,0,.42)}
+    .phead{padding:16px 20px 13px}
+    h1{font-size:18px}
+    .psub{font-size:10.5px;margin-top:2px}
+    #periodBadge{font-size:10.5px;padding:4px 9px}
+    .prog{height:5px;margin-top:11px}
+    .pnav{margin-top:10px;gap:7px}
+    .pnav button{height:36px;font-size:12px;border-radius:10px}
+    .pcounter{font-size:11.5px;padding:0 4px}
+    .pcounter b{font-size:14px}
+    .pbody{padding:16px 20px 48px}
+    #card{padding:15px 16px 15px}
+    .cname{font-size:20px}
+    .cen{font-size:10.5px}
+    .csum{font-size:13.2px;line-height:1.72}
+    .cmove{font-size:11.5px;padding:9px 11px;margin-top:11px}
+    .cmeta{gap:16px;font-size:10.5px}
+    .cscript{font-size:12px}
+    .ev{font-size:12.2px;padding:6px 0}
+    .psref{font-size:12.5px}
+    .pskey{font-size:11.8px}
+    .jname{font-size:13px}
+    .jen{font-size:9.5px}
+    .jele{font-size:11px}
+    .jkm{font-size:9.5px}
+    .jitem{padding:9px 9px 9px 0}
+    .jnum{width:32px;height:32px;font-size:10.5px}
+    .jnum i{inset:7px}
+    .jgroup::before{left:16px}
+    #legend{left:16px;bottom:38px;max-width:240px;padding:9px 11px 8px}
+    #legend .lgbar{height:9px}
+    #legend .lgnote{font-size:8.5px}
+    #mapui{left:16px;right:16px;top:14px}
+    #excChip{font-size:10.5px;padding:5px 12px}
+    #excChip b{font-size:12.5px}
+    .mbtn{padding:6px 11px;font-size:11.5px;border-radius:11px}
+    #datum .dlab{left:16px;font-size:9.5px}
+    .pin .tag{font-size:11px}
+    #load{top:60px}
+  }
+  @media (min-width:1500px){
+    .pbody{padding:18px 24px 52px}
+    .phead{padding:18px 24px 14px}
   }
   @media (max-width:899px){
-    .cbody{padding:0 12px;scrollbar-width:none}
-    .cbody::-webkit-scrollbar{width:0;height:0}
-    .chead{padding:2px 12px 5px}
-    .cname{font-size:16px}
-    .meta{margin-top:5px;gap:10px}
-    .scripture{margin-top:7px;font-size:11px}
-    .summary{margin-top:5px;font-size:12px;line-height:1.52}
-    .badges{margin-top:8px;gap:5px}
-    .badge{padding:5px 8px}
-    .badge .bv{font-size:12.5px}
-    .badge .bs{font-size:8.5px}
-    .profwrap{margin-top:10px}
-    #profile{height:92px}
-    .foot{font-size:8.5px;margin-bottom:8px}
-    .ctl{padding:6px 12px calc(8px + env(safe-area-inset-bottom,0px))}
-    .nav{height:36px}
-    .ev{font-size:11.3px;padding:5px 0}
-    .ps{margin-bottom:6px}
-  }
-  @media (max-width:700px){
-    .sub{display:none}
-    h1{font-size:13.5px}
-    .brand{gap:6px}
-    .mark{width:26px;height:26px;flex:0 0 26px;font-size:12px;border-radius:7px}
-    #periodBadge{font-size:9.5px;padding:3px 6px;max-width:36vw}
-    #hud{font-size:10px;min-width:112px;padding:6px 8px 7px}
-    .cen{display:none}
-    .cper{max-width:46%;font-size:9.5px;padding:2px 6px;line-height:1.35}
-    .ibtn{padding:6px 7px}
-    .hdr-right{flex:0 0 auto}
+    #legend{bottom:26px;max-width:min(196px,54%)}
+    .pbody{padding:10px 12px 34px}
+    .phead{padding:8px 12px 7px}
   }
   @media (max-width:430px){
-    .mark{display:none}
+    #datum .dlab{display:none}
     h1{font-size:13px}
-  }
-  @media (max-width:560px){
-    #styleLbl, #ovBtn .lb{display:none}
-    .ibtn{padding:6px 8px}
-    h1{font-size:14px}
-    .seenlbl{display:none}
-    #hud{display:none}
-  }
-  @media (max-width:380px){
-    .cper{display:none}
+    .psub{font-size:9px}
+    #periodBadge{font-size:9px;padding:2px 6px}
+    .pnav button{height:31px;font-size:10.5px}
+    .pcounter{font-size:10px}
+    .pcounter b{font-size:12px}
+    #legend .lgnote{display:none}
+    #legend{max-width:150px;bottom:24px}
+    #card{padding:10px}
+    .cname{font-size:15.5px}
+    .cmove{font-size:10px}
+    .jitem{grid-template-columns:28px minmax(0,1fr) auto;gap:6px}
+    .jnum{width:28px;height:28px;font-size:9.5px}
+    .jnum i{inset:5px}
+    .jgroup::before{left:14px}
+    .pin .tag{font-size:9.5px;padding:1px 6px}
   }
   @media (prefers-reduced-motion:reduce){
     *{animation-duration:.001s!important;transition-duration:.001s!important}
@@ -473,138 +523,114 @@
   window.addEventListener("unhandledrejection", function(e){ window.__errs.push("promise: " + String(e.reason)); });
 </script>
 
-<div id="map"></div>
+<div id="app">
 
-<header id="hdr">
-  <div class="brand">
-    <div class="mark">♔</div>
-    <div style="min-width:0">
-      <h1>다윗의 <em>도피 여정</em></h1>
-      <div class="sub">이스라엘 3D 지도 · 요나단과의 이별에서 왕위 등극까지</div>
-    </div>
-  </div>
-  <div class="hdr-right">
-    <span id="periodBadge"><i></i><span id="periodTxt">1기 · 도피의 시작</span></span>
-    <button class="ibtn" id="ovBtn" type="button" title="전체 여정 보기">
-      <span class="ico">🗺</span><span class="lb">전체</span>
-    </button>
-    <button class="ibtn" id="styleBtn" type="button" title="지도 스타일 전환">
-      <span class="ico">🛰</span><span id="styleLbl">위성</span>
-    </button>
-    <button class="ibtn" id="tocBtn" type="button" title="전체 목차">
-      <span class="ico">☰</span><span class="seenlbl">목차</span>
-    </button>
-  </div>
-</header>
+  <div id="mapwrap">
+    <div id="map"></div>
+    <div id="legs"></div>
+    <div id="pins"></div>
+    <div id="datum"><span class="dline"></span><span class="dlab">해수면 0 m 기준</span></div>
 
-<div id="hud">
-  <div class="hd">지도 중심 좌표</div>
-  <div class="row"><span class="k">LAT</span><span class="v" id="hLat">–</span></div>
-  <div class="row"><span class="k">LNG</span><span class="v" id="hLng">–</span></div>
-  <div class="row"><span class="k">ELEV</span><span class="v ele" id="hEle">–</span></div>
-</div>
-
-<section id="card" aria-label="현재 지점 정보">
-  <div class="grip"></div>
-  <div class="chead">
-    <span class="rank" id="cRank">01 / 18</span>
-    <div class="names">
-      <h2 class="cname" id="cName">기브아 · 에셀 바위</h2>
-      <p class="cen" id="cEn">Gibeah of Saul</p>
-    </div>
-    <span class="cper" id="cPer">1기 · 도피의 시작</span>
-    <button class="fold" id="foldBtn" type="button" aria-label="카드 접기">▾</button>
-  </div>
-  <div class="cbody">
-
-    <div class="meta">
-      <span><span class="lab">위도</span> <b class="n" id="cLat">–</b></span>
-      <span><span class="lab">경도</span> <b class="n" id="cLng">–</b></span>
-      <span><span class="lab">해발</span> <b class="n" id="cEle">–</b></span>
-      <span><span class="lab">추정 연대</span> <b class="n" id="cDate">–</b></span>
-    </div>
-
-    <div class="scripture"><span class="ico">📖</span><span id="cScript">–</span></div>
-    <p class="summary" id="cSummary">–</p>
-
-    <div class="badges">
-      <div class="badge" id="bKmBox">
-        <span class="bk">구간 거리</span>
-        <span class="bv" id="bKm">–</span>
-        <span class="bs" id="bKmSub">직전 지점에서</span>
-      </div>
-      <div class="badge" id="bTotBox">
-        <span class="bk">누적 거리</span>
-        <span class="bv" id="bTot">–</span>
-        <span class="bs" id="bTotSub">출발지 대비</span>
-      </div>
-      <div class="badge" id="bEleBox">
-        <span class="bk">고도 변화</span>
-        <span class="bv" id="bEle">–</span>
-        <span class="bs" id="bEleSub">–</span>
-      </div>
-      <div class="badge" id="bTimeBox">
-        <span class="bk">도보 예상</span>
-        <span class="bv" id="bTime">–</span>
-        <span class="bs" id="bTimeSub">–</span>
+    <div id="mapui">
+      <div id="excChip"><span>기둥 세로 과장</span><b id="excTxt">×1</b></div>
+      <div id="mbtns">
+        <button class="mbtn" id="ovBtn" type="button" title="전체 여정 보기"><span class="ico">⤢</span>전체</button>
+        <button class="mbtn" id="styleBtn" type="button" title="지도 스타일 전환"><span class="ico">🛰</span><span id="styleLbl">위성</span></button>
       </div>
     </div>
 
-    <div class="profwrap">
-      <div class="profhead">
-        <span><b>고도 프로파일</b> · 사해 수면(0m) 기준</span>
-        <span id="profRange">−300m ~ +930m</span>
+    <div id="legend">
+      <div class="lgt">해발 고도 · 기둥 높이</div>
+      <div class="lgbar"></div>
+      <div class="lgn">
+        <span style="left:7%">−300</span>
+        <span style="left:28.6%">0</span>
+        <span style="left:57%">400</span>
+        <span style="left:93%">900</span>
       </div>
-      <svg id="profile" role="img" aria-label="여정 전체 고도 프로파일"></svg>
-      <div class="foot" id="footNote">거리는 지점 간 직선거리에 고대 도보 경로 보정(×1.18~1.30)을 적용한 추정치이고, 도보 시간은 평지 4km/h·오르막 100m당 10분 기준의 근사값입니다. 성경 인용은 개역개정, 지명 위치는 학계의 주요 비정을 따랐습니다.</div>
+      <div class="lgnote">각 지점의 기둥 길이 = 해발 고도. 화면에서 읽히도록 세로를 <b id="excTxt2">×1</b> 과장했습니다(해수면 아래는 아래로).</div>
     </div>
 
-    <div class="sec">
-      <div class="sech"><b>사건 기록</b> · 사무엘상·하</div>
-      <div id="evList"></div>
-    </div>
-
-    <div class="sec">
-      <div class="sech"><b>다윗의 시편</b> · 이 지명과 연결된 기도</div>
-      <div id="psList"></div>
-    </div>
-
-    <div class="note" id="cNote"></div>
+    <div id="load"><i></i><span>3D 지형 불러오는 중…</span></div>
+    <div id="err"></div>
+    <div id="splash"><div class="spin"><div class="crown">♔</div><p id="splashMsg">3D 지형을 불러오는 중…</p></div></div>
   </div>
 
-  <div class="ctl">
-    <div class="ctlrow">
-      <button class="nav side" id="prevBtn" type="button" aria-label="이전 지점">◀</button>
-      <button class="nav play" id="playBtn" type="button" aria-label="자동 재생"><span class="pi">▶</span><span id="playLbl">자동 재생</span></button>
-      <button class="nav side" id="nextBtn" type="button" aria-label="다음 지점">▶</button>
+  <aside id="panel" aria-label="여정 목록과 현재 지점 정보">
+    <div class="phead">
+      <div class="ptop">
+        <div>
+          <h1>다윗의 <em>도피 여정</em></h1>
+          <div class="psub">기브아에서 시온까지 · <b>18</b>개 지점 · 누적 <b id="totKm">–</b></div>
+        </div>
+        <span id="periodBadge"><i></i><span id="periodTxt">1기 · 도피의 시작</span></span>
+      </div>
+      <div class="prog"><div id="progFill"></div></div>
+      <div class="pnav">
+        <button id="prevBtn" type="button" aria-label="이전 지점">◀ 이전</button>
+        <span class="pcounter"><b id="cIdx">1</b> / <span id="cTot">18</span></span>
+        <button id="playBtn" type="button" aria-label="자동 재생"><span id="playIco">▶</span> 자동</button>
+        <button id="nextBtn" type="button" aria-label="다음 지점">다음 ▶</button>
+      </div>
     </div>
-    <div class="slider">
-      <span class="t" id="sliderCur">1</span>
-      <input id="slider" type="range" min="0" max="17" step="1" value="0" aria-label="여정 타임라인" />
-      <span class="t" id="sliderMax">18</span>
+
+    <div class="pbody" id="pbody">
+      <div id="card" aria-live="polite">
+        <div class="chead">
+          <span class="crank" id="cRank">01</span>
+          <div class="names">
+            <h2 class="cname" id="cName">–</h2>
+            <div class="cen" id="cEn">–</div>
+          </div>
+          <span class="cchip" id="cPer">–</span>
+        </div>
+
+        <div class="cmove" id="cMove">
+          <span class="mv" id="cFrom">출발점</span>
+          <span class="ar" id="cArrow">●</span>
+          <span class="mv" id="cTo">–</span>
+          <span class="km" id="cKm">–</span>
+        </div>
+
+        <div class="cmeta">
+          <span><span class="lab">해발</span> <b id="cEle">–</b></span>
+          <span><span class="lab">고도 변화</span> <b id="cDz">–</b></span>
+          <span><span class="lab">누적</span> <b id="cTot2">–</b></span>
+          <span><span class="lab">추정</span> <b id="cDate">–</b></span>
+        </div>
+
+        <div class="cscript"><span class="ico">📖</span><span id="cScript">–</span></div>
+        <p class="csum" id="cSummary">–</p>
+
+        <div class="csec"><b>사건 기록</b> · 사무엘상·하</div>
+        <div id="evList"></div>
+
+        <div class="csec"><b>다윗의 시편</b> · 이 지명과 연결된 기도</div>
+        <div id="psList"></div>
+
+        <div class="csec"><b>이 지명을 다룬 영상</b> · 확인된 링크<em>새 탭에서 열림</em></div>
+        <div id="ytList"></div>
+        <a class="ytmore" id="ytMore" href="#" target="_blank" rel="noopener noreferrer">
+          <span>유튜브에서 더 찾아보기</span><span class="ar">→</span>
+        </a>
+
+        <div class="cnote" id="cNote"></div>
+      </div>
+
+      <div class="jhead">
+        <h3>여정 순서</h3>
+        <span>지명을 누르면 지도가 그곳으로 이동합니다</span>
+      </div>
+      <div id="jlist"></div>
+
+      <div class="pfoot">
+        <b>읽는 법</b> — 지도의 수직 기둥 하나가 그 지점의 해발 고도입니다. 기둥이 길수록 높은 곳이고, 해수면 아래(사해·요르단 계곡)는 점선 기둥으로 아래로 뻗습니다.
+        기둥 길이는 화면에서 읽히도록 세로만 크게 과장했으므로 실제 지형 단면과 같은 비율은 아닙니다.
+        거리는 지점 간 직선거리에 고대 도보 경로 보정(×1.18~1.30)을 적용한 추정치이고, 도보 시간은 평지 4km/h·오르막 100m당 10분 기준의 근사값입니다.
+        성경 인용은 개역개정, 지명 위치는 학계의 주요 비정을 따랐습니다.
+      </div>
     </div>
-  </div>
-</section>
-
-<div id="toc" role="dialog" aria-modal="true" aria-label="전체 목차">
-  <div class="tocpanel">
-    <div class="tochead">
-      <h2>전체 여정 <small id="tocSub">18개 지점 · 도피 → 등극</small></h2>
-      <button class="ibtn" id="tocClose" type="button" aria-label="목차 닫기">✕ 닫기</button>
-    </div>
-    <div class="toclist" id="tocList"></div>
-  </div>
-</div>
-
-<div id="load"><i></i><span>3D 지형 불러오는 중…</span></div>
-
-<div id="err"></div>
-
-<div id="splash">
-  <div class="spin">
-    <div class="crown">♔</div>
-    <p id="splashMsg">3D 지형을 불러오는 중…</p>
-  </div>
+  </aside>
 </div>
 
 <script src="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.js"></script>
@@ -612,12 +638,6 @@
 (function(){
   "use strict";
 
-  /* =========================================================
-     1. 여정 데이터 — 시간순 18개 지점
-     phase: 1 도피의 시작 / 2 유다 광야 은신 / 3 블레셋 망명 / 4 왕위 등극
-     via: 경로선이 지형을 따라가도록 넣은 경유 좌표 [lat,lng]
-     factor: 직선거리 → 고대 도보 경로 보정 계수
-     ========================================================= */
   const PHASES = {
     1:{label:"1기 · 도피의 시작", color:"#e3bb74", date:"기원전 1015년경"},
     2:{label:"2기 · 유다 광야 은신", color:"#6fbfb3", date:"기원전 1014~1010년경"},
@@ -974,7 +994,43 @@
   const P = RAW.map((p,i)=>Object.assign({}, p, {order:i+1, phaseColor: PHASES[p.phase].color}));
 
   /* =========================================================
-     2. 거리 · 고도 · 도보 시간 계산
+     지명별 영상 링크 — v:[videoId, 채널명, 영상 제목]
+     · 모든 링크는 2026-11-24 youtube oembed(HTTP 200)로 존재를 확인했습니다.
+     · q: "유튜브에서 더 찾아보기" 검색어
+     ========================================================= */
+  const MEDIA = {
+    1:{q:"기브아 에셀 바위 다윗 요나단", v:[["VKvyMACtAEk","성경지리 연구소(MEM)","[169] 다윗을 만나다-03/ 다윗과 요나단의 언약/ 라마 나욧/ 창문과 성벽/ 엘람/ 기브아/성경지리 연구소/ 유병성 목사"],
+       ["1ZeZ5bZYNvA","성지전문방송 Bibleland TV","기브아, 사울왕의 고향 기브아"]]},
+    2:{q:"놉 제사장 성읍 아히멜렉", v:[["Clqi6aa79YA","성경지리 연구소(MEM)","[176] 다윗을 만나다-05/ 진설병과 골리앗의 칼/ 아히멜렉과 놉의 비밀/ MEM 연구소/ 성경지리 연구소/ 유병성 목사"]]},
+    3:{q:"가드 블레셋 텔 에스사피", v:[["Jp4-ss9tR98","성경지리 연구소(MEM)","[181] 다윗을 만나다-06/ 다윗왕과 가드 / 골리앗의 칼을 들고 골리앗의 성읍으로/ 텔 짜피트/ 다윗이 미친척 한 이유/성경지리  연구소/ 유병성 목사"],
+       ["kXL6jU2H5KM","역사지리로 보는 성경","블레셋의 가드 텔에서"]]},
+    4:{q:"아둘람 굴 다윗", v:[["z7uRYNP8CJE","성경지리 연구소(MEM)","[186] 다윗을 만나다-07/ 아둘람 공동체 / 대제사장 아비아달-예수님의 실수일까? /성경지리 연구소/ MEM 연구소/ 유병성 목사"],
+       ["yqvwxoVA7D8","CGN","아빠와 아들의 찾아가는 이스라엘 성지 이야기! | 아둘람 굴 | 걸어서 이스라엘 Ep.1"]]},
+    5:{q:"모압 미스베 다윗 부모", v:[["dAGCdECBbJs","C채널방송 : TV","모압의 마지막 항전지, 성경 속 길 하레셋 (요르단 케락) [성지가 좋다] 553회"]]},
+    6:{q:"헤렛 수풀 다윗", v:[["sBPBugevGBs","구속사, 구속사 만나","[2025년 6월 18일(수)] 헤렛 수풀로 간 이유 - 아침을 여는 구속사 만나"]]},
+    7:{q:"그일라 다윗 성읍", v:[["2jtbe4SlE5k","때가이르매 timecome","사무엘상 23장 | 어려움 속에서도 그일라를 구한 다윗 | 성경 이야기"]]},
+    8:{q:"십 광야 호레스 다윗", v:[["nmhzbOzuoho","성경지리 연구소(MEM)","[234] 다윗을 만나다-11회 / 십 광야/ 창과 물병/ 베들레헴에서 예루살렘까지 / 성경지리 연구소/ 유병성 목사"]]},
+    9:{q:"마온 광야 셀라하마느곳", v:[["eu-5WtKJp0s","성경지리 연구소(MEM)","[190] 다윗을 만나다-08/ 셀라하마느곳의 구원/ 그일라 구출 작전/ 베들레헴에서 예루살렘 까지/ MEM 연구소/ 유병성 목사"]]},
+    10:{q:"엔게디 굴 다윗 사울", v:[["_MwCDN-BBxE","성경지리 연구소(MEM)","[203] 다윗을 만나다-09/ 엔게디의 도딤 동굴/ 다윗이 사울의 겉옷 자락을 자른 이유/ 베들레헴에서 예루살렘까지/ 성경지리 연구소/ 유병성 목사"],
+       ["KpHGJIV46FM","성지순례TV","다윗이 사울왕을 피해 도망갔던  엔게디/들염소의 샘/사무엘상 24장/4K/드론/Ein Gedi/Drone"]]},
+    11:{q:"마온 갈멜 나발 아비가일", v:[["XE5N7p186NU","성경지리 연구소(MEM)","[231] 다윗을 만나다-10/ 다윗과 아비가일/ 마온과 갈멜/ 생명 싸개/ 성경지리 연구소/ 유병성 목사"]]},
+    12:{q:"하길라 산 다윗 사울", v:[]},
+    13:{q:"가드 아기스 다윗 망명", v:[["CzikxFvn17U","새말씀찬양(New Words & Worship)","사무엘상 27장(1 Samuel 27): 블레셋 가드 망명과 다윗의 지혜로운 위장술"],
+       ["v0BHDvYwnho","우리 아둘남","꼬마 순례자둘 골리앗의 고향 가드 텔 짜핏을 찾아서 #01 텔 짜핏은 무슨 의미일까요? 여기가 블레셋 도시 가드라는 걸 어떻게 알 수 있죠? 이번 여행은 법궤 이동 경로를 따라서!"]]},
+    14:{q:"시글락 다윗", v:[["liUc7NeL4bI","성경지리 연구소(MEM)","[236] 다윗을 만나다-12회/ 시글락 /텔 세라/ 히르벳 아-라이/ 여룹바알 / 성경지리 연구소/ 유병성 목사"]]},
+    15:{q:"브솔 시내 다윗 아말렉", v:[["Lsw8NvbhHEM","성경지리 연구소(MEM)","[64] 브솔 시내/ 나할 (하)브솔/ 데렉 하브솔/ 왜 '브솔 시내'라고 했을까?/'나할'이란 무엇일까?/ 성경의 땅 답사/ 유 병성 목사"],
+       ["tPdDQHUmno8","성지순례TV","브솔시내/다윗이 아말렉을 추격하였던 브솔시내/사무엘상30장/4K/Drone"]]},
+    16:{q:"헤브론 다윗 유다 왕", v:[["0_2aie55Xmg","성지전문방송 Bibleland TV","헤브론의 마므레 #Mamre in Hebron"],
+       ["Sc008IFUGEo","C채널방송 : TV","6.헤브론과 족장의 무덤(이강근박사) -C채널"]]},
+    17:{q:"헤브론 온 이스라엘 왕 다윗", v:[["ecBbR0Mb3UY","[성아형 TV] 성지 좀 아는 형","성아형TV EP75 이스라엘24 헤브론"]]},
+    18:{q:"다윗성 예루살렘", v:[["2jwuFIKorGQ","C채널방송 : TV","성지가 좋다 16회 다윗성1  - 이강근 박사"],
+       ["nxVvkFdG2Vw","CGN","Q. 다윗성 안에는 '이것'까지 있다? 🌊 | 다윗성 | 걸어서 이스라엘 Ep.9"]]}
+  };
+
+  const el = id => document.getElementById(id);
+
+  /* =========================================================
+     거리 · 고도 · 도보 시간
      ========================================================= */
   const R = 6371.0088;
   const rad = d => d*Math.PI/180;
@@ -984,7 +1040,6 @@
     const a = Math.sin(dLat/2)**2 + Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLng/2)**2;
     return 2*R*Math.asin(Math.min(1,Math.sqrt(a)));
   }
-
   function coordsTo(i){
     const p = P[i];
     const out = [];
@@ -993,9 +1048,8 @@
     out.push([p.lat, p.lng]);
     return out;
   }
-
   const legs = P.map((p,i)=>{
-    if(i===0) return {km:0, ascent:0, descent:0, hours:0, days:0, cum:0};
+    if(i===0) return {km:0, ascent:0, descent:0, hours:0, days:0, cum:0, mid:[p.lat,p.lng]};
     const cs = coordsTo(i);
     let d = 0;
     for(let k=1;k<cs.length;k++) d += haversine(cs[k-1][0],cs[k-1][1],cs[k][0],cs[k][1]);
@@ -1004,13 +1058,22 @@
     const ascent = Math.max(0,diff), descent = Math.max(0,-diff);
     const hours = km/4 + ascent/100*(10/60);
     const days = Math.max(1, Math.ceil(km/30));
-    return {km, ascent, descent, hours, days, cum:0};
+    // 구간 중간 지점(라벨 위치)
+    let half = d/2, acc = 0, mid = [cs[0][0], cs[0][1]];
+    for(let k=1;k<cs.length;k++){
+      const seg = haversine(cs[k-1][0],cs[k-1][1],cs[k][0],cs[k][1]);
+      if(acc + seg >= half && seg > 0){
+        const t = (half-acc)/seg;
+        mid = [cs[k-1][0]+(cs[k][0]-cs[k-1][0])*t, cs[k-1][1]+(cs[k][1]-cs[k-1][1])*t];
+        break;
+      }
+      acc += seg; mid = [cs[k][0], cs[k][1]];
+    }
+    return {km, ascent, descent, hours, days, cum:0, mid};
   });
   let cum = 0;
   legs.forEach(l=>{ cum += l.km; l.cum = cum; });
   const TOTAL_KM = cum;
-  const TOTAL_ELEV_GAIN = legs.reduce((s,l)=>s+l.ascent,0);
-  const PSALM_COUNT = P.reduce((s,p)=>s+(p.psalms?p.psalms.length:0),0);
 
   function fmtKm(km){
     if(km < 1) return Math.round(km*1000)+" m";
@@ -1023,16 +1086,56 @@
     if(mm===0) return hh+"시간";
     return hh+"시간 "+mm+"분";
   }
+  function fmtEle(m){
+    const v = Math.round(m);
+    return (v<0 ? "−" : "") + Math.abs(v).toLocaleString("ko-KR") + " m";
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
 
   /* =========================================================
-     3. 지도 초기화
+     고도 → 색 그라데이션
+     ========================================================= */
+  const RAMP = [
+    {e:-400, c:[42,86,120]},
+    {e:-150, c:[52,120,150]},
+    {e:0,    c:[70,150,160]},
+    {e:250,  c:[150,158,120]},
+    {e:500,  c:[206,150,86]},
+    {e:750,  c:[236,178,104]},
+    {e:1000, c:[255,214,140]}
+  ];
+  function rampColor(e){
+    if(e <= RAMP[0].e) return RAMP[0].c;
+    if(e >= RAMP[RAMP.length-1].e) return RAMP[RAMP.length-1].c;
+    for(let i=1;i<RAMP.length;i++){
+      if(e <= RAMP[i].e){
+        const a = RAMP[i-1], b = RAMP[i];
+        const t = (e-a.e)/(b.e-a.e);
+        return [
+          Math.round(a.c[0]+(b.c[0]-a.c[0])*t),
+          Math.round(a.c[1]+(b.c[1]-a.c[1])*t),
+          Math.round(a.c[2]+(b.c[2]-a.c[2])*t)
+        ];
+      }
+    }
+    return RAMP[RAMP.length-1].c;
+  }
+  function rgb(c){ return "rgb("+c[0]+","+c[1]+","+c[2]+")"; }
+  function lighten(c, f){
+    return "rgb("+Math.round(c[0]+(255-c[0])*f)+","+Math.round(c[1]+(255-c[1])*f)+","+Math.round(c[2]+(255-c[2])*f)+")";
+  }
+
+  /* =========================================================
+     지도
      ========================================================= */
   const SAT = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
   const OSM = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
-  let map, markers=[], cur=0, playing=false, playTimer=null, styleMode="sat";
-
-  const el = id => document.getElementById(id);
+  let map = null, cur = 0, playing = false, playTimer = null, styleMode = "sat";
+  let pinEls = [], legEls = [], lbCache = [];
+  let exaggNow = 10;
 
   function showError(msg){
     const e = el("err");
@@ -1056,18 +1159,18 @@
           topo:{type:"raster", tiles:[OSM], tileSize:256, maxzoom:19, attribution:"© OpenStreetMap"}
         },
         layers:[
-          {id:"sat", type:"raster", source:"sat", paint:{"raster-saturation":-0.12,"raster-brightness-min":0.03,"raster-contrast":0.06}},
+          {id:"sat", type:"raster", source:"sat", paint:{"raster-saturation":-0.16,"raster-brightness-min":0.02,"raster-brightness-max":0.86,"raster-contrast":0.12}},
           {id:"topo", type:"raster", source:"topo", layout:{visibility:"none"}}
         ]
       },
-      center:[35.20, 31.62],
-      zoom:7.55,
-      pitch:52,
-      bearing:-6,
-      maxPitch:82,
+      center:[35.10, 31.62],
+      zoom:9.1,
+      pitch:58,
+      bearing:-9,
+      maxPitch:85,
       antialias:true,
       attributionControl:false,
-      fadeDuration:180
+      fadeDuration:160
     });
   }catch(e){
     showError("지도를 초기화하지 못했습니다. ("+e.message+")");
@@ -1075,19 +1178,57 @@
   }
 
   map.addControl(new maplibregl.AttributionControl({compact:true}), "bottom-right");
-  window.__dj = {map:map, go:function(i,o){return go(i,o);}, P:P, legs:legs, total:TOTAL_KM, psalms:PSALM_COUNT};
+  map.addControl(new maplibregl.NavigationControl({visualizePitch:true, showCompass:true, showZoom:false}), "bottom-right");
+  map.addControl(new maplibregl.ScaleControl({maxWidth:88, unit:"metric"}), "bottom-right");
 
-  map.on("error", function(ev){
-    if(ev && ev.error && /Failed to fetch|NetworkError/i.test(String(ev.error.message))){
-      console.warn("tile fetch issue:", ev.error.message);
-    }
-  });
+  window.__dj = {
+    map:map,
+    go:function(i,o){ return go(i,o); },
+    P:P, legs:legs, total:TOTAL_KM,
+    state:function(){ return {cur:cur, exagg:exaggNow, errs:window.__errs}; }
+  };
 
-  const routeAll = {type:"FeatureCollection", features:[]};
+  /* --- 화면 좌표 도우미 --- */
+  function groundScreen(lng, lat){
+    try{
+      const t = map.terrain;
+      if(t && map.transform && typeof map.transform.locationToScreenPoint === "function"){
+        const p = map.transform.locationToScreenPoint({lng:lng, lat:lat}, t);
+        if(p && isFinite(p.x) && isFinite(p.y)) return p;
+      }
+    }catch(e){ /* fall through */ }
+    return map.project([lng, lat]);
+  }
+  function metersPerPixel(){
+    try{
+      const ppm = map.transform && map.transform.pixelsPerMeter;
+      if(ppm && isFinite(ppm) && ppm > 0) return 1/ppm;
+    }catch(e){}
+    const ws = (map.transform && map.transform.worldSize) || (512*Math.pow(2, map.getZoom()));
+    return 40075016.686 * Math.cos(rad(map.getCenter().lat)) / ws;
+  }
+  function isMobile(){ return window.innerWidth < 900; }
+
+  /* --- 고도 과장 계산 --- */
+  function calcExagg(){
+    const mpp = metersPerPixel();
+    const sinP = Math.max(0.10, Math.sin(rad(map.getPitch())));
+    const target = isMobile() ? 62 : 112;     // 가장 높은 지점(930m) 기둥의 목표 픽셀 길이
+    let k = target * mpp / (930 * sinP);
+    k = Math.max(1, Math.min(60, k));
+    return {k: Math.round(k*10)/10, mpp:mpp, sinP:sinP};
+  }
+
+  /* =========================================================
+     지도 레이어
+     ========================================================= */
+  const routeAll  = {type:"FeatureCollection", features:[]};
   const routeDone = {type:"FeatureCollection", features:[]};
   const routeLast = {type:"FeatureCollection", features:[]};
-
-  function lngLat(c){ return [c[1], c[0]]; }
+  const lngLat = c => [c[1], c[0]];
+  function lineFeature(coords){
+    return {type:"Feature", properties:{}, geometry:{type:"LineString", coordinates:coords}};
+  }
   function pathCoords(from,to){
     const out = [];
     for(let i=from;i<=to;i++){
@@ -1095,6 +1236,25 @@
       cs.forEach((c,k)=>{ if(out.length && k===0) return; out.push(lngLat(c)); });
     }
     return out;
+  }
+
+  function chevronImage(){
+    const s = 64;
+    const c = document.createElement("canvas");
+    c.width = s; c.height = s;
+    const g = c.getContext("2d");
+    g.strokeStyle = "#ffe1ab";
+    g.lineWidth = 7;
+    g.lineCap = "round";
+    g.lineJoin = "round";
+    g.shadowColor = "rgba(255,210,150,.85)";
+    g.shadowBlur = 8;
+    g.beginPath();
+    g.moveTo(s*0.26, s*0.64);
+    g.lineTo(s*0.5, s*0.36);
+    g.lineTo(s*0.74, s*0.64);
+    g.stroke();
+    return g.getImageData(0,0,s,s);
   }
 
   map.on("load", function(){
@@ -1106,14 +1266,14 @@
       maxzoom:13,
       attribution:"DEM AWS Terrarium"
     });
-    map.setTerrain({source:"dem", exaggeration:1.8});
+    map.setTerrain({source:"dem", exaggeration:1.6});
 
     map.addLayer({
       id:"hillshade",
       type:"hillshade",
       source:"dem",
       paint:{
-        "hillshade-exaggeration":0.4,
+        "hillshade-exaggeration":0.42,
         "hillshade-shadow-color":"#06121a",
         "hillshade-highlight-color":"#f7e7c4",
         "hillshade-accent-color":"#2a4a55"
@@ -1124,11 +1284,11 @@
       if(map.setFog) map.setFog({
         "color":"#0d2430",
         "high-color":"#123243",
-        "horizon-blend":0.22,
+        "horizon-blend":0.2,
         "space-color":"#050c12",
-        "star-intensity":0.06
+        "star-intensity":0.05
       });
-    }catch(e){ /* older renderer */ }
+    }catch(e){ /* 구버전 렌더러 */ }
 
     map.addSource("route-all", {type:"geojson", data:routeAll});
     map.addSource("route-done", {type:"geojson", data:routeDone});
@@ -1137,64 +1297,230 @@
     map.addLayer({
       id:"route-all-casing", type:"line", source:"route-all",
       layout:{"line-join":"round","line-cap":"round"},
-      paint:{"line-color":"#05141d","line-width":8,"line-opacity":0.4,"line-blur":2.5}
+      paint:{"line-color":"#04101a","line-width":9,"line-opacity":0.55,"line-blur":2.5}
     });
     map.addLayer({
       id:"route-all", type:"line", source:"route-all",
       layout:{"line-join":"round","line-cap":"round"},
-      paint:{"line-color":"#ecc180","line-width":2.4,"line-opacity":0.72,"line-dasharray":[3,2.2]}
+      paint:{"line-color":"#ecc180","line-width":2.4,"line-opacity":0.7,"line-dasharray":[3,2.2]}
     });
     map.addLayer({
       id:"route-done-glow", type:"line", source:"route-done",
       layout:{"line-join":"round","line-cap":"round"},
-      paint:{"line-color":"#f4cf8c","line-width":12,"line-opacity":0.2,"line-blur":9}
+      paint:{"line-color":"#f4cf8c","line-width":12,"line-opacity":0.18,"line-blur":9}
     });
     map.addLayer({
       id:"route-done", type:"line", source:"route-done",
       layout:{"line-join":"round","line-cap":"round"},
-      paint:{"line-color":"#f6d79b","line-width":4.2,"line-opacity":0.95}
+      paint:{"line-color":"#f6d79b","line-width":4,"line-opacity":0.92}
     });
     map.addLayer({
       id:"route-last-glow", type:"line", source:"route-last",
       layout:{"line-join":"round","line-cap":"round"},
-      paint:{"line-color":"#ffb877","line-width":17,"line-opacity":0.26,"line-blur":12}
+      paint:{"line-color":"#ffb877","line-width":16,"line-opacity":0.24,"line-blur":12}
     });
     map.addLayer({
       id:"route-last", type:"line", source:"route-last",
       layout:{"line-join":"round","line-cap":"round"},
-      paint:{"line-color":"#ffcb8e","line-width":5.6,"line-opacity":1}
+      paint:{"line-color":"#ffcb8e","line-width":5.2,"line-opacity":1}
     });
 
-    P.forEach((p,i)=>{
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "mk";
-      b.style.setProperty("--pc", p.phaseColor);
-      b.innerHTML = '<span class="num">'+(i+1)+'</span><span class="lbl">'+escapeHtml(p.name)+'</span>';
-      b.setAttribute("aria-label", (i+1)+"번 "+p.name+" ("+PHASES[p.phase].label+")");
-      b.addEventListener("click", function(ev){ ev.stopPropagation(); go(i,{user:true}); });
-      const m = new maplibregl.Marker({element:b, anchor:"center"}).setLngLat([p.lng,p.lat]).addTo(map);
-      markers.push({el:b, marker:m});
-    });
+    // 진행 방향 화살표
+    try{
+      map.addImage("chev", chevronImage(), {pixelRatio:2});
+      map.addLayer({
+        id:"route-arrows", type:"symbol", source:"route-all",
+        layout:{
+          "symbol-placement":"line",
+          "symbol-spacing":["interpolate",["linear"],["zoom"],6,110,9,86,12,60],
+          "icon-image":"chev",
+          "icon-size":["interpolate",["linear"],["zoom"],6,0.5,9,0.66,12,0.8],
+          "icon-rotation-alignment":"map",
+          "icon-pitch-alignment":"map",
+          "icon-allow-overlap":true,
+          "icon-ignore-placement":true,
+          "icon-keep-upright":false
+        },
+        paint:{"icon-opacity":0.95}
+      });
+    }catch(e){ console.warn("arrow layer:", e.message); }
 
+    buildPins();
+    buildLegs();
     drawRoutes(0);
+    render();
     hideSplash();
+
     const h = parseInt((location.hash||"").replace("#",""),10);
     if(Number.isFinite(h) && h>=1 && h<=N){
       go(h-1, {instant:true});
+    }else if(isMobile()){
+      // 휴대폰은 한 지점에서 바로 입체적으로 시작하고, 전체 보기는 버튼으로
+      go(0, {instant:true});
     }else{
-      go(0, {instant:true, wide:true});
+      cur = 0;
+      applyOverview(true);
+      render();
+      drawRoutes(0);
     }
+    scheduleFrame();
+    setTimeout(updateScene, 300);
+    setTimeout(updateScene, 1100);
   });
 
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  /* =========================================================
+     기둥(pin) · 구간 라벨 DOM
+     ========================================================= */
+  function buildPins(){
+    const wrap = el("pins");
+    wrap.innerHTML = "";
+    pinEls = P.map(function(p,i){
+      const d = document.createElement("div");
+      d.className = "pin dim";
+      const c = rampColor(p.elevation_m);
+      d.style.setProperty("--c", rgb(c));
+      d.style.setProperty("--c2", lighten(c, 0.55));
+      if(p.elevation_m < 0) d.classList.add("neg");
+      d.innerHTML =
+        '<span class="stem"></span>'+
+        '<span class="cap"></span>'+
+        '<span class="base">'+(i+1)+'</span>'+
+        '<span class="tag"><span class="tn">'+(i+1)+'</span><span class="tx">'+escapeHtml(p.name)+'</span><span class="te">'+fmtEle(p.elevation_m)+'</span></span>';
+      d.setAttribute("role","button");
+      d.setAttribute("tabindex","0");
+      d.setAttribute("aria-label",(i+1)+"번 "+p.name+" · 해발 "+fmtEle(p.elevation_m)+" · "+PHASES[p.phase].label);
+      d.addEventListener("click", function(ev){ ev.stopPropagation(); go(i,{user:true}); });
+      d.addEventListener("keydown", function(ev){ if(ev.key==="Enter"||ev.key===" "){ ev.preventDefault(); go(i,{user:true}); } });
+      d.addEventListener("mouseenter", function(){ d.classList.add("hover"); });
+      d.addEventListener("mouseleave", function(){ d.classList.remove("hover"); });
+      wrap.appendChild(d);
+      return d;
+    });
+    // 라벨 폭 캐시
+    lbCache = pinEls.map(function(d){
+      const t = d.querySelector(".tag");
+      return {w: t ? t.offsetWidth : 70, h: t ? t.offsetHeight : 18, tag:t};
+    });
   }
 
-  function lineFeature(coords){
-    return {type:"Feature", properties:{}, geometry:{type:"LineString", coordinates:coords}};
+  function buildLegs(){
+    const wrap = el("legs");
+    wrap.innerHTML = "";
+    legEls = legs.map(function(l,i){
+      if(i===0) return null;
+      const d = document.createElement("div");
+      d.className = "leg";
+      d.innerHTML = '<span class="lp"><i>→</i>'+fmtKm(l.km)+'</span>';
+      wrap.appendChild(d);
+      return d;
+    });
   }
 
+  /* =========================================================
+     프레임 갱신: 기둥 높이 · 위치 · 라벨
+     ========================================================= */
+  let rafId = null;
+  function scheduleFrame(){
+    if(rafId) return;
+    rafId = requestAnimationFrame(function(){ rafId = null; updateScene(); });
+  }
+
+  function updateScene(){
+    if(!map || !pinEls.length) return;
+    const ex = calcExagg();
+    exaggNow = ex.k;
+    const W = el("mapwrap").clientWidth, H = el("mapwrap").clientHeight;
+
+    const txt = "×" + (ex.k < 10 ? ex.k.toFixed(1) : Math.round(ex.k));
+    if(el("excTxt").textContent !== txt) el("excTxt").textContent = txt;
+    if(el("excTxt2").textContent !== txt) el("excTxt2").textContent = txt;
+
+    // 기둥 높이(px) = |고도| × 과장 ÷ mpp × sin(pitch)
+    const scale = ex.k * ex.sinP / ex.mpp;
+    const placed = [];
+
+    // 현재 지점 우선, 그 다음 가까운 순
+    const order = P.map(function(p,i){ return i; }).sort(function(a,b){
+      if(a===cur) return -1;
+      if(b===cur) return 1;
+      // 라벨은 높은 지점부터 — "어디가 높은지"가 먼저 보이도록
+      return P[b].elevation_m - P[a].elevation_m;
+    });
+
+    order.forEach(function(i){
+      const p = P[i], d = pinEls[i];
+      const g = groundScreen(p.lng, p.lat);
+      const hPx = Math.max(7, Math.abs(p.elevation_m) * scale);
+      const inView = g.x > -60 && g.x < W + 60 && g.y > -40 && g.y < H + hPx + 60;
+
+      d.classList.toggle("hide", !inView);
+      if(!inView) return;
+
+      d.style.transform = "translate(" + g.x.toFixed(1) + "px," + g.y.toFixed(1) + "px)";
+      d.style.setProperty("--h", hPx.toFixed(1) + "px");
+
+      // 라벨 겹침 정리
+      const lb = lbCache[i];
+      if(!lb || !lb.tag) return;
+      if(i === cur){
+        lb.tag.style.visibility = "visible";
+        placed.push({x:g.x - lb.w/2, y:g.y - hPx - 7 - lb.h, w:lb.w, h:lb.h});
+        placed.push({x:g.x - 11, y:g.y - 11, w:22, h:22});   // 현재 지점의 번호 핀
+        return;
+      }
+      const top = p.elevation_m < 0 ? g.y + hPx + 8 : g.y - hPx - 7 - lb.h;
+      const box = {x:g.x - lb.w/2, y:top, w:lb.w, h:lb.h};
+      let hit = false;
+      for(let k=0;k<placed.length;k++){
+        const o = placed[k];
+        if(box.x < o.x+o.w+4 && box.x+box.w+4 > o.x && box.y < o.y+o.h+3 && box.y+box.h+3 > o.y){ hit = true; break; }
+      }
+      const tooSmall = i !== cur && map.getZoom() < (isMobile() ? 9.2 : 7.6);
+      lb.tag.style.visibility = (hit || tooSmall) ? "hidden" : "visible";
+      if(!hit && !tooSmall) placed.push(box);
+    });
+
+    // 구간 거리 라벨
+    const legOrder = legEls.map(function(e,i){ return i; }).filter(function(i){ return i>0; }).sort(function(a,b){
+      if(a===cur) return -1;
+      if(b===cur) return 1;
+      return a-b;
+    });
+    const placedLegs = [];
+    const showLegs = map.getZoom() >= (isMobile() ? 8.7 : 7.3);
+    legOrder.forEach(function(i){
+      const e = legEls[i];
+      if(!e) return;
+      const mid = legs[i].mid;
+      const g = groundScreen(mid[1], mid[0]);
+      const vis = showLegs && g.x > 10 && g.x < W-10 && g.y > 10 && g.y < H-10;
+      if(!vis){ e.classList.add("hide"); return; }
+      let hit = false;
+      for(let k=0;k<placedLegs.length;k++){
+        const o = placedLegs[k];
+        if(Math.abs(o.x-g.x) < 66 && Math.abs(o.y-g.y) < 20){ hit = true; break; }
+      }
+      if(hit){ e.classList.add("hide"); return; }
+      e.classList.remove("hide");
+      e.style.transform = "translate(" + g.x.toFixed(1) + "px," + g.y.toFixed(1) + "px)";
+      placedLegs.push({x:g.x, y:g.y});
+    });
+
+    // 해수면 기준선
+    const c = map.getCenter();
+    const sea = map.project([c.lng, c.lat]);
+    const datum = el("datum");
+    if(sea.y > 24 && sea.y < H - 18){
+      datum.classList.add("on");
+      datum.style.transform = "translateY(" + sea.y.toFixed(1) + "px)";
+    }else{
+      datum.classList.remove("on");
+    }
+  }
+
+  /* =========================================================
+     경로 그리기
+     ========================================================= */
   function drawRoutes(i){
     routeAll.features = [lineFeature(pathCoords(0,N-1))];
     const doneCoords = i>0 ? pathCoords(0,i) : [];
@@ -1208,168 +1534,63 @@
   }
 
   /* =========================================================
-     4. 카메라 · 상태 전환
+     카드 · 목록 렌더
      ========================================================= */
-  function bearingTo(a,b){
-    const φ1 = rad(a.lat), φ2 = rad(b.lat), Δλ = rad(b.lng-a.lng);
-    const y = Math.sin(Δλ)*Math.cos(φ2);
-    const x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
-    return (Math.atan2(y,x)*180/Math.PI + 360) % 360;
-  }
-
-  function cardHeight(){
-    const c = el("card");
-    return c ? c.getBoundingClientRect().height : 0;
-  }
-
-  function flyToPoint(i, instant){
-    const p = P[i];
-    const prev = i>0 ? P[i-1] : null;
-    let bearing = map.getBearing();
-    if(prev) bearing = bearingTo(prev,p);
-    const km = legs[i].km;
-    let zoom = 11.2;
-    if(km > 200) zoom = 6.9;
-    else if(km > 90) zoom = 7.8;
-    else if(km > 40) zoom = 8.8;
-    else if(km > 15) zoom = 10.2;
-    else if(km > 5) zoom = 11.6;
-    else zoom = 12.6;
-
-    const isMobile = window.innerWidth < 900;
-    const pad = isMobile
-      ? {bottom: Math.min(cardHeight()+18, window.innerHeight*0.66), top: 70, left: 0, right: 0}
-      : {bottom: 200, top: 92, left: 512, right: 30};
-
-    const opts = {
-      center:[p.lng, p.lat],
-      zoom: zoom,
-      pitch: i===0 ? 52 : 57,
-      bearing: bearing,
-      padding: pad,
-      essential:true,
-      duration: instant ? 0 : 1900,
-      curve: 1.42
-    };
-    if(instant){
-      map.jumpTo({center:opts.center, zoom:opts.zoom, pitch:opts.pitch, bearing:opts.bearing, padding:pad});
-      setTimeout(function(){ alignTarget(i); }, 120);
-    }else{
-      map.flyTo(opts);
-      map.once("moveend", function(){ setTimeout(function(){ alignTarget(i); }, 90); });
-    }
-  }
-
-  function alignTarget(i){
-    const mk = markers[i];
-    if(!mk || map.isMoving()) return;
-    const r = mk.el.getBoundingClientRect();
-    const y = r.top + r.height/2;
-    const isMobile = window.innerWidth < 900;
-    const cardTop = el("card").getBoundingClientRect().top;
-    const botLimit = isMobile ? cardTop - 90 : window.innerHeight * 0.62;
-    const topLimit = isMobile ? 128 : 118;
-    let d = 0;
-    if(y > botLimit) d = Math.min(y - botLimit, window.innerHeight * 0.42);
-    else if(y < topLimit) d = -Math.min(topLimit - y, window.innerHeight * 0.42);
-    if(Math.abs(d) > 6) map.panBy([0, d], {duration: 480, essential:true});
-  }
-
-  function go(i, opt){
-    opt = opt || {};
-    i = Math.max(0, Math.min(N-1, i));
-    cur = i;
-    render();
-    drawRoutes(i);
-    if(opt.wide){
-      const cam = overviewCamera();
-      map.jumpTo({center:cam.center, zoom:cam.zoom, pitch:cam.pitch, bearing:cam.bearing, padding:cam.padding});
-    }else{
-      flyToPoint(i, !!opt.instant);
-    }
-    if(location.hash !== "#"+(i+1)){
-      history.replaceState(null,"","#"+(i+1));
-    }
-    if(opt.user){
-      stopPlay();
-      if(window.innerWidth < 900 && isFolded()) setFold(false);
-    }
-  }
-
   function render(){
     const p = P[cur], l = legs[cur], ph = PHASES[p.phase];
-    el("cRank").textContent = String(cur+1).padStart(2,"0")+" / "+N;
+    const card = el("card");
+    card.style.setProperty("--cc", ph.color);
+
+    el("cRank").textContent = String(cur+1).padStart(2,"0");
     el("cName").textContent = p.name;
     el("cEn").textContent = p.english_name;
     el("cPer").textContent = ph.label;
     el("cPer").style.color = ph.color;
     el("cPer").style.borderColor = ph.color+"66";
     el("cPer").style.background = ph.color+"1f";
+
     el("periodTxt").textContent = ph.label;
     el("periodBadge").querySelector("i").style.background = ph.color;
     el("periodBadge").style.borderColor = ph.color+"55";
-    el("cLat").textContent = p.lat.toFixed(4)+"° N";
-    el("cLng").textContent = p.lng.toFixed(4)+"° E";
-    el("cEle").textContent = Math.round(p.elevation_m).toLocaleString("ko-KR")+" m";
+
+    // 이동(어디서 어디로)
+    if(cur === 0){
+      el("cFrom").textContent = "여정의 시작";
+      el("cArrow").textContent = "●";
+      el("cTo").textContent = p.name;
+      el("cKm").innerHTML = "출발점";
+    }else{
+      el("cFrom").textContent = P[cur-1].name;
+      el("cArrow").textContent = "→";
+      el("cTo").textContent = p.name;
+      el("cKm").innerHTML = fmtKm(l.km) + "<small>도보 " + fmtDur(l.hours) + "</small>";
+    }
+
+    el("cEle").textContent = fmtEle(p.elevation_m);
+    if(cur === 0){
+      el("cDz").textContent = fmtEle(p.elevation_m);
+      el("cDz").className = "";
+    }else if(l.ascent > 0){
+      el("cDz").textContent = "▲ +" + Math.round(l.ascent).toLocaleString("ko-KR") + " m";
+      el("cDz").className = "up";
+    }else if(l.descent > 0){
+      el("cDz").textContent = "▼ −" + Math.round(l.descent).toLocaleString("ko-KR") + " m";
+      el("cDz").className = "dn";
+    }else{
+      el("cDz").textContent = "0 m";
+      el("cDz").className = "";
+    }
+    el("cTot2").textContent = cur===0 ? "0 km" : fmtKm(l.cum);
     el("cDate").textContent = ph.date;
+
     el("cScript").textContent = p.scripture;
     el("cSummary").textContent = p.summary;
 
-    if(cur===0){
-      el("bKm").textContent = "출발";
-      el("bKmSub").textContent = "여정의 시작점";
-      el("bTot").textContent = "0 km";
-      el("bTotSub").textContent = "누적 없음";
-      el("bEle").textContent = Math.round(p.elevation_m).toLocaleString("ko-KR")+" m";
-      el("bEleSub").textContent = "해발 고도";
-      el("bEleBox").className = "badge flat";
-      el("bTime").textContent = "–";
-      el("bTimeSub").textContent = "이동 없음";
-    }else{
-      el("bKm").textContent = fmtKm(l.km);
-      el("bKmSub").textContent = "도보 보정 ×"+(p.factor||1.18).toFixed(2);
-      el("bTot").textContent = fmtKm(l.cum);
-      el("bTotSub").textContent = "출발지 대비";
-      if(l.ascent>0){
-        el("bEle").textContent = "+"+Math.round(l.ascent).toLocaleString("ko-KR")+" m";
-        el("bEleSub").textContent = "오르막 상승";
-        el("bEleBox").className = "badge up";
-      }else if(l.descent>0){
-        el("bEle").textContent = "−"+Math.round(l.descent).toLocaleString("ko-KR")+" m";
-        el("bEleSub").textContent = "내리막 하강";
-        el("bEleBox").className = "badge down";
-      }else{
-        el("bEle").textContent = "0 m";
-        el("bEleSub").textContent = "고도 변화 없음";
-        el("bEleBox").className = "badge flat";
-      }
-      el("bTime").textContent = fmtDur(l.hours);
-      el("bTimeSub").textContent = l.days===1 ? "하루 30km 기준 · 당일" : "하루 30km 기준 약 "+l.days+"일";
-    }
-
-    el("card").style.setProperty("--prog", (cur/(N-1)*100).toFixed(2)+"%");
-    el("slider").value = cur;
-    el("slider").style.setProperty("--fill", (cur/(N-1)*100).toFixed(2)+"%");
-    el("sliderCur").textContent = String(cur+1);
-    el("sliderMax").textContent = String(N);
-    el("prevBtn").disabled = cur===0;
-    el("prevBtn").style.opacity = cur===0 ? .35 : 1;
-    el("nextBtn").disabled = cur===N-1;
-    el("nextBtn").style.opacity = cur===N-1 ? .35 : 1;
-
-    markers.forEach((m,i)=>{
-      const cl = "mk" + (i===cur ? " cur" : (i<cur ? " done" : ""));
-      if(m.el.className !== cl) m.el.className = cl;
-      m.el.style.zIndex = i===cur ? 8 : (i<cur ? 3 : 2);
-    });
-
-    // 사건 목록
     const evHtml = (p.events||[]).map(function(ev){
       return '<div class="ev"><span class="r">'+escapeHtml(ev.r)+'</span><span class="t">'+escapeHtml(ev.t)+'</span></div>';
     }).join("");
     el("evList").innerHTML = evHtml || '<div class="ev"><span class="t">기록 없음</span></div>';
 
-    // 시편
     const psHtml = (p.psalms||[]).map(function(ps){
       const cls = ps.type === "dir" ? "dir" : "ctx";
       const lab = ps.type === "dir" ? "표제" : "정황";
@@ -1381,323 +1602,321 @@
         '</div>';
     }).join("");
     el("psList").innerHTML = psHtml || '<div class="ps"><div class="pstitle">표제로 지정된 시편이 없습니다.</div></div>';
-
+    renderMedia(cur);
     el("cNote").innerHTML = p.note || "";
 
-    drawProfile();
-    renderTOCState();
-    updateHud();
-    if(window.innerWidth < 900) el("card").querySelector(".cbody").scrollTop = 0;
-  }
+    // 진행 표시
+    el("cIdx").textContent = cur+1;
+    el("cTot").textContent = N;
+    el("progFill").style.width = ((cur+1)/N*100).toFixed(2)+"%";
+    el("prevBtn").disabled = cur===0;
+    el("nextBtn").disabled = cur===N-1;
 
-  function updateHud(){
-    if(!map) return;
-    const c = map.getCenter();
-    el("hLat").textContent = c.lat.toFixed(4)+"°";
-    el("hLng").textContent = c.lng.toFixed(4)+"°";
-    let e = null;
-    try{
-      const raw = map.queryTerrainElevation(c);
-      const plain = map.queryTerrainElevation(c, {exaggerated:false});
-      const ex = (map.getTerrain() && map.getTerrain().exaggeration) || 1;
-      e = (raw!==null && raw!==undefined && Math.abs(raw-plain)<0.01) ? raw/ex : plain;
-      if(e===0 && Math.abs(P[cur].elevation_m) > 5) e = P[cur].elevation_m;
-    }catch(err){ e = null; }
-    if(e===null || e===undefined || !isFinite(e)) e = P[cur].elevation_m;
-    el("hEle").textContent = Math.round(e).toLocaleString("ko-KR")+" m";
-  }
-  let hudRaf = null;
-  function onMove(){
-    if(hudRaf) return;
-    hudRaf = requestAnimationFrame(()=>{ hudRaf=null; updateHud(); });
-  }
-
-  /* =========================================================
-     5. 고도 프로파일 SVG
-     ========================================================= */
-  const profileEl = el("profile");
-  function drawProfile(){
-    const w = profileEl.clientWidth || 320;
-    const h = profileEl.clientHeight || 104;
-    if(!w) return;
-    const pad = {l:36, r:10, t:14, b:16};
-    const iw = Math.max(20, w-pad.l-pad.r), ih = Math.max(20, h-pad.t-pad.b);
-    const minE = -400, maxE = 980;
-    const X = i => pad.l + (i/(N-1))*iw;
-    const Y = e => pad.t + ih - ((e-minE)/(maxE-minE))*ih;
-    const baseY = pad.t + ih;
-
-    const yv = P.map(p=>p.elevation_m);
-    const SAMP = 12;
-    const samples = [];
-    for(let i=0;i<N-1;i++){
-      const y0 = yv[Math.max(0,i-1)], y1 = yv[i], y2 = yv[i+1], y3 = yv[Math.min(N-1,i+2)];
-      const lo = Math.min(y1,y2), hi = Math.max(y1,y2);
-      for(let s=0;s<SAMP;s++){
-        const t = s/SAMP, t2 = t*t, t3 = t2*t;
-        let y = 0.5*((2*y1) + (-y0+y2)*t + (2*y0-5*y1+4*y2-y3)*t2 + (-y0+3*y1-3*y2+y3)*t3);
-        y = Math.min(hi, Math.max(lo, y));
-        samples.push({f:i+t, y:y});
-      }
-    }
-    samples.push({f:N-1, y:yv[N-1]});
-    const SX = f => pad.l + (f/(N-1))*iw;
-
-    let line = "";
-    samples.forEach((s,k)=>{ line += (k?"L":"M") + SX(s.f).toFixed(1) + " " + Y(s.y).toFixed(1) + " "; });
-    let area = "M"+SX(0).toFixed(1)+" "+baseY.toFixed(1)+" ";
-    samples.forEach(s=>{ area += "L"+SX(s.f).toFixed(1)+" "+Y(s.y).toFixed(1)+" "; });
-    area += "L"+SX(N-1).toFixed(1)+" "+baseY.toFixed(1)+" Z";
-
-    let doneArea = "M"+SX(0).toFixed(1)+" "+baseY.toFixed(1)+" ";
-    samples.forEach(s=>{ if(s.f <= cur+0.0001) doneArea += "L"+SX(s.f).toFixed(1)+" "+Y(s.y).toFixed(1)+" "; });
-    doneArea += "L"+X(cur).toFixed(1)+" "+baseY.toFixed(1)+" Z";
-
-    const ticks = [800,400,0].map(v=>
-      '<line x1="'+pad.l+'" x2="'+(w-pad.r)+'" y1="'+Y(v).toFixed(1)+'" y2="'+Y(v).toFixed(1)+'" stroke="rgba(255,255,255,'+(v===0?0.22:0.06)+')" stroke-width="1" stroke-dasharray="'+(v===0?"4 4":"2 5")+'"/>'+
-      '<text x="'+(pad.l-5)+'" y="'+(Y(v)+3.2).toFixed(1)+'" text-anchor="end" font-size="8.5" fill="'+(v===0?"#a8b8c7":"#63758a")+'" font-family="system-ui,sans-serif">'+(v===0?"0":v)+'</text>'
-    ).join("");
-
-    let dots = "";
-    P.forEach((p,i)=>{
-      const isCur = i===cur, isDone = i<cur;
-      const r = isCur ? 4.6 : 2.4;
-      dots += '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(p.elevation_m).toFixed(1)+'" r="'+r+'" fill="'+(isCur?"#ffe6b5":p.phaseColor)+'" opacity="'+(isCur?1:(isDone?0.95:0.55))+'" stroke="'+(isCur?"#0a1620":p.phaseColor)+'" stroke-width="'+(isCur?2:0.8)+'"/>';
+    // 기둥 상태
+    pinEls.forEach(function(d,i){
+      d.classList.toggle("cur", i===cur);
+      d.classList.toggle("done", i<cur);
+      d.classList.toggle("dim", i!==cur && i>cur+1);
     });
 
-    const cx = X(cur), cy = Y(P[cur].elevation_m);
-    const label = (P[cur].elevation_m<0?"−":"")+Math.round(Math.abs(P[cur].elevation_m)).toLocaleString("ko-KR")+"m";
-    const labelX = Math.min(Math.max(cx, pad.l+24), w-32);
-    const labelY = cy < pad.t+18 ? cy+16 : cy-8;
+    // 목록 강조
+    Array.prototype.forEach.call(document.querySelectorAll(".jitem"), function(b){
+      const i = parseInt(b.dataset.i,10);
+      b.classList.toggle("cur", i===cur);
+      b.classList.toggle("done", i<cur);
+    });
 
-    profileEl.setAttribute("viewBox","0 0 "+w+" "+h);
-    profileEl.innerHTML =
-      '<defs>'+
-        '<linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">'+
-          '<stop offset="0%" stop-color="#e3bb74" stop-opacity="0.30"/>'+
-          '<stop offset="100%" stop-color="#e3bb74" stop-opacity="0.02"/>'+
-        '</linearGradient>'+
-        '<linearGradient id="pg2" x1="0" y1="0" x2="0" y2="1">'+
-          '<stop offset="0%" stop-color="#ffdd9e" stop-opacity="0.42"/>'+
-          '<stop offset="100%" stop-color="#ffdd9e" stop-opacity="0.04"/>'+
-        '</linearGradient>'+
-      '</defs>'+
-      ticks+
-      '<path d="'+area+'" fill="url(#pg)"/>'+
-      '<path d="'+doneArea+'" fill="url(#pg2)"/>'+
-      '<path d="'+line+'" fill="none" stroke="#a98a54" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>'+
-      '<line x1="'+cx.toFixed(1)+'" x2="'+cx.toFixed(1)+'" y1="'+pad.t+'" y2="'+baseY+'" stroke="rgba(255,220,160,.35)" stroke-width="1" stroke-dasharray="2 3"/>'+
-      dots+
-      '<text x="'+labelX.toFixed(1)+'" y="'+labelY.toFixed(1)+'" text-anchor="middle" font-size="9" font-weight="700" fill="#ffe6b5" font-family="system-ui,sans-serif">'+label+'</text>';
+    scheduleFrame();
   }
-
-  profileEl.addEventListener("click", function(ev){
-    const r = profileEl.getBoundingClientRect();
-    const pad = {l:36, r:10};
-    const iw = Math.max(20, r.width-pad.l-pad.r);
-    const x = ev.clientX - r.left - pad.l;
-    const i = Math.round(Math.max(0,Math.min(1, x/iw)) * (N-1));
-    go(i, {user:true});
-  });
 
   /* =========================================================
-     6. 컨트롤 · 목차 · 스타일
+     지명별 영상 링크
      ========================================================= */
-  el("prevBtn").addEventListener("click", ()=>go(cur-1,{user:true}));
-  el("nextBtn").addEventListener("click", ()=>go(cur+1,{user:true}));
-  el("slider").addEventListener("input", function(ev){ go(parseInt(ev.target.value,10),{user:true}); });
-
-  function setFold(compact){
-    el("card").classList.toggle("compact", !!compact);
-    el("foldBtn").textContent = compact ? "▴" : "▾";
-    el("foldBtn").setAttribute("aria-label", compact ? "카드 펼치기" : "카드 접기");
-    setTimeout(positionAttrib, 30);
+  function renderMedia(i){
+    const m = MEDIA[i+1] || {};
+    const vids = m.v || [];
+    let html = "";
+    vids.forEach(function(v){
+      const id = v[0], ch = v[1], title = v[2];
+      html += '<a class="ytcard" href="https://www.youtube.com/watch?v='+encodeURIComponent(id)+'" target="_blank" rel="noopener noreferrer">'+
+        '<span class="ytthumb"><img src="https://i.ytimg.com/vi/'+encodeURIComponent(id)+'/mqdefault.jpg" alt="" loading="lazy" onerror="this.remove()">'+
+          '<span class="ytplay"><span>▶</span></span></span>'+
+        '<span class="yttxt"><span class="yttitle">'+escapeHtml(title)+'</span>'+
+        '<span class="ytch">'+escapeHtml(ch)+' · YouTube</span></span></a>';
+    });
+    if(!vids.length){
+      html = '<div class="ytnone">이 지명을 다룬 영상 중 링크가 살아 있는 것을 확인하지 못했습니다. 아래 검색으로 찾아보세요.</div>';
+    }
+    el("ytList").innerHTML = html;
+    const q = m.q || (P[i].name + " 성경");
+    const more = el("ytMore");
+    more.href = "https://www.youtube.com/results?search_query=" + encodeURIComponent(q);
+    more.setAttribute("aria-label", q + " — 유튜브에서 검색 (새 탭에서 열림)");
   }
-  function isFolded(){ return el("card").classList.contains("compact"); }
-  el("foldBtn").addEventListener("click", function(){ setFold(!isFolded()); });
-  el("card").querySelector(".grip").addEventListener("click", function(){ setFold(!isFolded()); });
 
-  el("playBtn").addEventListener("click", function(){
-    if(playing) stopPlay(); else startPlay();
-  });
+  /* =========================================================
+     목록 만들기
+     ========================================================= */
+  function buildList(){
+    const host = el("jlist");
+    host.innerHTML = "";
+    const phaseKm = {}, phaseCount = {};
+    P.forEach(function(p,i){
+      if(i>0) phaseKm[p.phase] = (phaseKm[p.phase]||0) + legs[i].km;
+      phaseCount[p.phase] = (phaseCount[p.phase]||0)+1;
+    });
+
+    [1,2,3,4].forEach(function(ph){
+      const items = P.map(function(p,i){ return {p:p,i:i}; }).filter(function(o){ return o.p.phase===ph; });
+      if(!items.length) return;
+      const grp = document.createElement("div");
+      grp.className = "jgroup";
+      const hd = document.createElement("div");
+      hd.className = "jphase";
+      hd.innerHTML = '<i style="background:'+PHASES[ph].color+'"></i><b>'+escapeHtml(PHASES[ph].label)+'</b><em>'+phaseCount[ph]+'지점 · '+fmtKm(phaseKm[ph]||0)+'</em>';
+      grp.appendChild(hd);
+
+      items.forEach(function(o){
+        const i = o.i, p = o.p;
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "jitem";
+        b.dataset.i = i;
+        b.style.setProperty("--pc", p.phaseColor);
+        b.innerHTML =
+          '<span class="jnum"><i></i><span>'+(i+1)+'</span></span>'+
+          '<span class="jtxt"><span class="jname">'+escapeHtml(p.name)+'</span><span class="jen">'+escapeHtml(p.english_name)+'</span></span>'+
+          '<span class="jright"><span class="jele'+(p.elevation_m<0?" neg":"")+'">'+fmtEle(p.elevation_m)+'</span>'+
+          '<span class="jkm'+(i===0?" first":"")+'">'+(i===0?"출발":"이동 "+fmtKm(legs[i].km))+'</span></span>';
+        b.addEventListener("click", function(){ go(i,{user:true,scroll:true}); });
+        grp.appendChild(b);
+      });
+      host.appendChild(grp);
+    });
+    el("totKm").textContent = fmtKm(TOTAL_KM);
+  }
+
+  /* =========================================================
+     카메라
+     ========================================================= */
+  function bearingTo(a,b){
+    const p1 = rad(a.lat), p2 = rad(b.lat), dl = rad(b.lng-a.lng);
+    const y = Math.sin(dl)*Math.cos(p2);
+    const x = Math.cos(p1)*Math.sin(p2) - Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
+    return (Math.atan2(y,x)*180/Math.PI + 360) % 360;
+  }
+
+  function focusCamera(i){
+    const p = P[i];
+    const km = legs[i].km;
+    let z = 12.6;
+    if(km > 200) z = 7.6;
+    else if(km > 90) z = 8.3;
+    else if(km > 40) z = 9.3;
+    else if(km > 15) z = 10.6;
+    else if(km > 5) z = 11.7;
+    if(isMobile()) z = Math.min(z, 11.5);
+    const H = el("mapwrap").clientHeight;
+    return {
+      center:[p.lng, p.lat],
+      zoom:z,
+      pitch: isMobile() ? 54 : 58,
+      bearing: map ? map.getBearing() : -9,
+      padding:{top: Math.max(60, H*0.42), bottom: 26, left: 0, right: 0}
+    };
+  }
+
+  function overviewCam(){
+    const box = el("mapwrap").getBoundingClientRect();
+    const pad = isMobile() ? {t:54,b:52,l:16,r:16} : {t:64,b:64,l:26,r:26};
+    const w = Math.max(140, box.width - pad.l - pad.r);
+    const h = Math.max(140, box.height - pad.t - pad.b);
+    const lats = P.map(p=>p.lat), lngs = P.map(p=>p.lng);
+    const minLat = Math.min.apply(null,lats), maxLat = Math.max.apply(null,lats);
+    const minLng = Math.min.apply(null,lngs), maxLng = Math.max.apply(null,lngs);
+    const midLat = (minLat+maxLat)/2, midLng = (minLng+maxLng)/2;
+    const cosLat = Math.cos(rad(midLat));
+    const zx = Math.log2(w * 360 / (512 * (maxLng-minLng) * 1.12));
+    const zy = Math.log2(h * 360 * cosLat / (512 * (maxLat-minLat) * 1.12));
+    let z = Math.min(zx, zy);
+    z = Math.min(z, 10.2);
+    return {center:[midLng + 0.02, midLat], zoom:z, pitch: isMobile()?48:56, bearing:-9,
+            padding:{top:pad.t, bottom:pad.b, left:pad.l, right:pad.r}};
+  }
+
+  function applyOverview(instant){
+    const cam = overviewCam();
+    const o = {
+      center:cam.center, zoom:cam.zoom, pitch:cam.pitch, bearing:cam.bearing,
+      duration: instant ? 0 : 2000, essential:true
+    };
+    if(instant){ map.jumpTo(o); scheduleFrame(); }
+    else map.flyTo(o);
+    setTimeout(updateScene, instant ? 60 : 200);
+    setTimeout(updateScene, 2200);
+  }
+
+  /* =========================================================
+     이동
+     ========================================================= */
+  function go(i, opt){
+    opt = opt || {};
+    i = Math.max(0, Math.min(N-1, i));
+    cur = i;
+    render();
+    drawRoutes(i);
+    if(opt.wide){
+      applyOverview(false);
+    }else{
+      const cam = focusCamera(i);
+      if(opt.instant){
+        map.jumpTo({center:cam.center, zoom:cam.zoom, pitch:cam.pitch, bearing:cam.bearing, padding:cam.padding});
+      }else{
+        map.flyTo({center:cam.center, zoom:cam.zoom, pitch:cam.pitch, bearing:cam.bearing,
+                   padding:cam.padding, duration: opt.fast ? 1100 : 1750, curve:1.4, essential:true});
+      }
+    }
+    if(location.hash !== "#"+(i+1)) history.replaceState(null,"","#"+(i+1));
+    if(opt.scroll){
+      const body = el("pbody");
+      const top = el("card").getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 10;
+      body.scrollTo({top: Math.max(0, top), behavior: opt.instantScroll ? "auto" : "smooth"});
+    }
+    if(opt.user) stopPlay();
+    setTimeout(updateScene, opt.instant ? 60 : 200);
+  }
+
+  /* =========================================================
+     컨트롤
+     ========================================================= */
+  el("prevBtn").addEventListener("click", function(){ go(cur-1,{user:true,scroll:true}); });
+  el("nextBtn").addEventListener("click", function(){ go(cur+1,{user:true,scroll:true}); });
+
+  el("playBtn").addEventListener("click", function(){ playing ? stopPlay() : startPlay(); });
 
   function startPlay(){
-    if(cur >= N-1) go(0,{instant:false});
+    if(cur >= N-1){ go(0,{scroll:true,instantScroll:true}); }
     playing = true;
     el("playBtn").classList.add("on");
-    el("playLbl").textContent = "일시정지";
-    el("playBtn").querySelector(".pi").textContent = "❚❚";
+    el("playLbl") ; // no-op guard
+    el("playBtn").lastChild.textContent = " 정지";
+    el("playIco").textContent = "❚❚";
     clearInterval(playTimer);
-    playTimer = setInterval(()=>{
+    playTimer = setInterval(function(){
       if(cur >= N-1){ stopPlay(); return; }
       if(map && map.isMoving()) return;
-      go(cur+1);
+      go(cur+1,{fast:true,scroll:true});
     }, 5200);
   }
   function stopPlay(){
     playing = false;
     clearInterval(playTimer); playTimer = null;
     el("playBtn").classList.remove("on");
-    el("playLbl").textContent = "자동 재생";
-    el("playBtn").querySelector(".pi").textContent = "▶";
+    el("playBtn").lastChild.textContent = " 자동";
+    el("playIco").textContent = "▶";
   }
 
-  // 목차 — 단계별 묶음
-  const tocList = el("tocList");
-  const phaseKm = {};
-  P.forEach((p,i)=>{ if(i>0) phaseKm[p.phase] = (phaseKm[p.phase]||0) + legs[i].km; });
-  const phaseCount = {};
-  P.forEach(p=>{ phaseCount[p.phase] = (phaseCount[p.phase]||0)+1; });
-
-  [1,2,3,4].forEach(function(ph){
-    const hd = document.createElement("div");
-    hd.className = "tocgrp";
-    hd.innerHTML = '<i style="background:'+PHASES[ph].color+'"></i><b>'+escapeHtml(PHASES[ph].label)+'</b><span>'+phaseCount[ph]+'지점 · '+fmtKm(phaseKm[ph]||0)+'</span>';
-    tocList.appendChild(hd);
-
-    P.forEach((p,i)=>{
-      if(p.phase !== ph) return;
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "tocrow";
-      b.dataset.i = i;
-      b.style.setProperty("--pc", p.phaseColor);
-      b.innerHTML = '<span class="n">'+(i+1)+'</span>'+
-        '<span class="txt"><span class="nm">'+escapeHtml(p.name)+'</span><span class="ag">'+escapeHtml(p.scripture)+'</span></span>'+
-        (p.psalms && p.psalms.length ? '<span class="psn">시편</span>' : '')+
-        '<span class="km">'+(i===0?"출발":fmtKm(legs[i].km))+'</span>';
-      b.addEventListener("click", ()=>{ go(i,{user:true}); closeTOC(); });
-      tocList.appendChild(b);
-    });
+  el("ovBtn").addEventListener("click", function(){
+    stopPlay();
+    applyOverview(false);
   });
-  el("tocSub").textContent = N+"개 지점 · 도피 → 등극 · 누적 "+fmtKm(TOTAL_KM);
 
-  function renderTOCState(){
-    Array.prototype.forEach.call(tocList.querySelectorAll(".tocrow"), function(c,i){
-      c.classList.toggle("cur", parseInt(c.dataset.i,10)===cur);
-    });
-  }
-  function openTOC(){ el("toc").classList.add("open"); }
-  function closeTOC(){ el("toc").classList.remove("open"); }
-  el("tocBtn").addEventListener("click", openTOC);
-  el("tocClose").addEventListener("click", closeTOC);
-  el("toc").addEventListener("click", function(ev){ if(ev.target === el("toc")) closeTOC(); });
-
-  const styleBtn = el("styleBtn");
-  styleBtn.addEventListener("click", function(){
+  el("styleBtn").addEventListener("click", function(){
     if(!map || !map.getLayer("topo")) return;
     styleMode = styleMode === "sat" ? "topo" : "sat";
     map.setLayoutProperty("sat","visibility", styleMode==="sat"?"visible":"none");
     map.setLayoutProperty("topo","visibility", styleMode==="topo"?"visible":"none");
     if(map.getLayer("hillshade")){
-      map.setPaintProperty("hillshade","hillshade-exaggeration", styleMode==="sat"?0.4:0.18);
+      map.setPaintProperty("hillshade","hillshade-exaggeration", styleMode==="sat"?0.42:0.2);
     }
-    styleBtn.querySelector(".ico").textContent = styleMode==="sat" ? "🛰" : "🗺";
+    el("styleBtn").querySelector(".ico").textContent = styleMode==="sat" ? "🛰" : "🗺";
     el("styleLbl").textContent = styleMode==="sat" ? "위성" : "지형";
   });
 
-  function overviewCamera(){
-    const W = window.innerWidth, H = window.innerHeight;
-    const isMobile = W < 900;
-    const ch = cardHeight();
-    const pad = isMobile
-      ? {top:68, bottom: (isFolded()? 190 : Math.min(ch, H*0.62)+14), left:8, right:8}
-      : {top:92, bottom:74, left:482, right:36};
-    const lats = P.map(p=>p.lat), lngs = P.map(p=>p.lng);
-    const minLat = Math.min.apply(null,lats), maxLat = Math.max.apply(null,lats);
-    const minLng = Math.min.apply(null,lngs), maxLng = Math.max.apply(null,lngs);
-    const availW = Math.max(120, W-pad.left-pad.right);
-    const availH = Math.max(120, H-pad.top-pad.bottom);
-    const midLng = (minLng+maxLng)/2, midLat = (minLat+maxLat)/2;
-    const cosLat = Math.cos(rad(midLat));
-    const zx = Math.log2(availW*0.92*360/(512*(maxLng-minLng)));
-    const zy = Math.log2(availH*0.86*360*cosLat/(512*(maxLat-minLat)));
-    const z = Math.min(zx, zy, 8.2);
-    return {center:[midLng, midLat], zoom:z, pitch: isMobile?16:22, bearing:0, padding:pad};
+  document.addEventListener("keydown", function(ev){
+    if(ev.target && /input|textarea|select/i.test(ev.target.tagName)) return;
+    if(ev.key === "ArrowRight"){ ev.preventDefault(); go(cur+1,{user:true,scroll:true}); }
+    else if(ev.key === "ArrowLeft"){ ev.preventDefault(); go(cur-1,{user:true,scroll:true}); }
+    else if(ev.key === " "){ ev.preventDefault(); playing ? stopPlay() : startPlay(); }
+    else if(ev.key === "Escape"){ stopPlay(); }
+  });
+
+  /* =========================================================
+     이벤트 · 로딩
+     ========================================================= */
+  let moveRaf = null;
+  function onMove(){
+    if(moveRaf) return;
+    moveRaf = requestAnimationFrame(function(){ moveRaf = null; updateScene(); });
   }
 
-  el("ovBtn").addEventListener("click", function(){
-    stopPlay();
-    if(window.innerWidth < 900) setFold(true);
-    const cam = overviewCamera();
-    map.flyTo({
-      center: cam.center,
-      zoom: cam.zoom,
-      pitch: cam.pitch,
-      bearing: cam.bearing,
-      padding: cam.padding,
-      duration: 2200,
-      essential: true
-    });
+  map.on("move", onMove);
+  map.on("zoom", onMove);
+  map.on("pitch", onMove);
+  map.on("rotate", onMove);
+  map.on("terrain", onMove);
+  map.on("idle", function(){ measureTags(); updateScene(); });
+
+  function measureTags(){
+    for(let i=0;i<pinEls.length;i++){
+      const t = lbCache[i] && lbCache[i].tag;
+      if(!t) continue;
+      const w = t.offsetWidth, h = t.offsetHeight;
+      if(w && h){ lbCache[i].w = w; lbCache[i].h = h; }
+    }
+  }
+  map.on("render", function(){ if(map.isMoving()) onMove(); });
+
+  map.on("error", function(ev){
+    if(ev && ev.error && /Failed to fetch|NetworkError/i.test(String(ev.error.message))){
+      console.warn("tile fetch issue:", ev.error.message);
+    }
   });
 
-  document.addEventListener("keydown", function(ev){
-    if(ev.key === "ArrowRight"){ go(cur+1,{user:true}); }
-    else if(ev.key === "ArrowLeft"){ go(cur-1,{user:true}); }
-    else if(ev.key === " "){ ev.preventDefault(); playing?stopPlay():startPlay(); }
-    else if(ev.key === "Escape"){ closeTOC(); }
-  });
-
-  // 지형 타일 로딩 표시
   let loadT = null, loadFailsafe = null;
   function showLoad(){
     if(loadT) return;
-    loadT = setTimeout(function(){ el("load").classList.add("on"); }, 650);
+    loadT = setTimeout(function(){ el("load").classList.add("on"); }, 700);
   }
   function hideLoad(){
     clearTimeout(loadT); loadT = null;
     clearTimeout(loadFailsafe); loadFailsafe = null;
     el("load").classList.remove("on");
   }
-  function loadFailsafeOn(){
+  map.on("movestart", function(){
+    showLoad();
     clearTimeout(loadFailsafe);
-    loadFailsafe = setTimeout(hideLoad, 15000);
-  }
-  map.on("movestart", function(){ showLoad(); loadFailsafeOn(); });
-  map.on("moveend", function(){ setTimeout(hideLoad, 900); });
-  map.on("idle", hideLoad);
-  map.on("sourcedata", function(){ if(map.loaded()) hideLoad(); });
-
-  map.on("move", onMove);
-  map.on("moveend", onMove);
-  map.on("pitch", onMove);
-  map.on("idle", onMove);
-  map.on("terrain", onMove);
-  map.on("zoom", function(){
-    el("map").classList.toggle("lowzoom", map.getZoom() < 8.4);
+    loadFailsafe = setTimeout(hideLoad, 14000);
   });
+  map.on("moveend", function(){ setTimeout(hideLoad, 850); updateScene(); });
+  map.on("idle", hideLoad);
 
   let rzT = null;
   window.addEventListener("resize", function(){
     clearTimeout(rzT);
-    rzT = setTimeout(()=>{ drawProfile(); positionAttrib(); }, 180);
+    rzT = setTimeout(function(){
+      scheduleFrame();
+      if(!map) return;
+      if(isMobile() && map.getPitch() > 54) map.setPitch(54);
+    }, 200);
   });
 
-  function positionAttrib(){
-    const ctrl = document.querySelector(".maplibregl-ctrl-bottom-right");
-    if(!ctrl) return;
-    if(window.innerWidth < 900){
-      ctrl.style.bottom = (cardHeight()+6)+"px";
-    }else{
-      ctrl.style.bottom = "6px";
-    }
-  }
-
   function hideSplash(){
-    positionAttrib();
-    setTimeout(()=>{
+    setTimeout(function(){
       el("splash").classList.add("hide");
-      el("splashMsg").textContent = "";
-    }, 260);
+      setTimeout(function(){ el("splashMsg").textContent = ""; }, 500);
+    }, 200);
   }
 
+  buildList();
   render();
+  scheduleFrame();
 
   setTimeout(function(){
     if(el("splash") && !el("splash").classList.contains("hide")){
       el("splashMsg").textContent = "3D 지형 타일을 받는 중입니다…";
     }
-  }, 4200);
+  }, 5000);
 
 })();
 </script>
