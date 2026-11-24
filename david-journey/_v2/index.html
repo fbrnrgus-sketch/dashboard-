@@ -1354,6 +1354,9 @@
     const h = parseInt((location.hash||"").replace("#",""),10);
     if(Number.isFinite(h) && h>=1 && h<=N){
       go(h-1, {instant:true});
+    }else if(isMobile()){
+      // 휴대폰은 한 지점에서 바로 입체적으로 시작하고, 전체 보기는 버튼으로
+      go(0, {instant:true});
     }else{
       cur = 0;
       applyOverview(true);
@@ -1361,6 +1364,8 @@
       drawRoutes(0);
     }
     scheduleFrame();
+    setTimeout(updateScene, 300);
+    setTimeout(updateScene, 1100);
   });
 
   /* =========================================================
@@ -1745,6 +1750,8 @@
     };
     if(instant){ map.jumpTo(o); scheduleFrame(); }
     else map.flyTo(o);
+    setTimeout(updateScene, instant ? 60 : 200);
+    setTimeout(updateScene, 2200);
   }
 
   /* =========================================================
@@ -1774,6 +1781,7 @@
       body.scrollTo({top: Math.max(0, top), behavior: opt.instantScroll ? "auto" : "smooth"});
     }
     if(opt.user) stopPlay();
+    setTimeout(updateScene, opt.instant ? 60 : 200);
   }
 
   /* =========================================================
@@ -1878,7 +1886,7 @@
     clearTimeout(loadFailsafe);
     loadFailsafe = setTimeout(hideLoad, 14000);
   });
-  map.on("moveend", function(){ setTimeout(hideLoad, 850); });
+  map.on("moveend", function(){ setTimeout(hideLoad, 850); updateScene(); });
   map.on("idle", hideLoad);
 
   let rzT = null;
