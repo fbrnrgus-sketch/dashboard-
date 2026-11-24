@@ -74,10 +74,10 @@
     will-change:transform;
   }
   .pin .stem{
-    position:absolute;left:-3px;bottom:0;width:6px;height:var(--h);
-    border-radius:3px 3px 1px 1px;
-    background:linear-gradient(to top,color-mix(in srgb,var(--c) 55%,#0b141c) 0%,var(--c) 46%,var(--c2) 100%);
-    box-shadow:0 0 10px color-mix(in srgb,var(--c) 45%,transparent);
+    position:absolute;left:-3.5px;bottom:0;width:7px;height:var(--h);
+    border-radius:3.5px 3.5px 1px 1px;
+    background:linear-gradient(to top,color-mix(in srgb,var(--c) 62%,#0b141c) 0%,var(--c) 46%,var(--c2) 100%);
+    box-shadow:0 0 0 1px rgba(5,11,17,.55),0 0 10px color-mix(in srgb,var(--c) 55%,transparent);
     transition:opacity .25s,box-shadow .25s;
   }
   .pin .stem::before{ /* 기둥 바닥의 접지 그림자 */
@@ -85,9 +85,9 @@
     background:radial-gradient(closest-side,rgba(0,0,0,.55),rgba(0,0,0,0));
   }
   .pin .cap{
-    position:absolute;left:-4.5px;bottom:calc(var(--h) - 4.5px);width:9px;height:9px;border-radius:50%;
-    background:var(--c2);border:1.5px solid rgba(9,16,23,.85);
-    box-shadow:0 0 10px color-mix(in srgb,var(--c2) 70%,transparent);
+    position:absolute;left:-5px;bottom:calc(var(--h) - 5px);width:10px;height:10px;border-radius:50%;
+    background:var(--c2);border:1.5px solid rgba(9,16,23,.9);
+    box-shadow:0 0 0 1px rgba(5,11,17,.45),0 0 12px color-mix(in srgb,var(--c2) 80%,transparent);
     transition:opacity .25s,transform .25s;
   }
   .pin .base{
@@ -115,9 +115,9 @@
   .pin .tag .tn{color:var(--c);font-variant-numeric:tabular-nums}
 
   /* 상태 */
-  .pin.dim .stem{opacity:.34}
-  .pin.dim .base{opacity:.62;transform:scale(.82)}
-  .pin.dim .cap{opacity:.4}
+  .pin.dim .stem{opacity:.58}
+  .pin.dim .base{opacity:.8;transform:scale(.86)}
+  .pin.dim .cap{opacity:.62}
   .pin.dim .tag{opacity:0}
   .pin.done .stem{opacity:.62}
   .pin.cur .stem{box-shadow:0 0 16px color-mix(in srgb,var(--c2) 75%,transparent),0 0 34px color-mix(in srgb,var(--c) 40%,transparent)}
@@ -1207,7 +1207,7 @@
   function calcExagg(){
     const mpp = metersPerPixel();
     const sinP = Math.max(0.10, Math.sin(rad(map.getPitch())));
-    const target = isMobile() ? 56 : 88;      // 가장 높은 지점(930m) 기둥의 목표 픽셀 길이
+    const target = isMobile() ? 62 : 112;     // 가장 높은 지점(930m) 기둥의 목표 픽셀 길이
     let k = target * mpp / (930 * sinP);
     k = Math.max(1, Math.min(60, k));
     return {k: Math.round(k*10)/10, mpp:mpp, sinP:sinP};
@@ -1438,7 +1438,7 @@
     order.forEach(function(i){
       const p = P[i], d = pinEls[i];
       const g = groundScreen(p.lng, p.lat);
-      const hPx = Math.max(5, Math.abs(p.elevation_m) * scale);
+      const hPx = Math.max(7, Math.abs(p.elevation_m) * scale);
       const inView = g.x > -60 && g.x < W + 60 && g.y > -40 && g.y < H + hPx + 60;
 
       d.classList.toggle("hide", !inView);
