@@ -53,7 +53,7 @@
     content:"";position:absolute;inset:0;pointer-events:none;
     background:
       radial-gradient(120% 90% at 50% 45%,rgba(0,0,0,0) 38%,rgba(4,10,16,.52) 100%),
-      linear-gradient(180deg,rgba(6,14,20,.44) 0%,rgba(6,14,20,.17) 34%,rgba(6,14,20,.19) 66%,rgba(6,14,20,.48) 100%);
+      linear-gradient(180deg,rgba(6,14,20,.44) 0%,rgba(6,14,20,.22) 34%,rgba(6,14,20,.24) 66%,rgba(6,14,20,.48) 100%);
   }
   .maplibregl-canvas:focus{outline:none}
   .maplibregl-ctrl-attrib{background:rgba(9,18,26,.72)!important;border-radius:8px!important;font-size:10px!important}
@@ -1159,7 +1159,7 @@
           topo:{type:"raster", tiles:[OSM], tileSize:256, maxzoom:19, attribution:"© OpenStreetMap"}
         },
         layers:[
-          {id:"sat", type:"raster", source:"sat", paint:{"raster-saturation":-0.16,"raster-brightness-min":0.02,"raster-brightness-max":0.86,"raster-contrast":0.12}},
+          {id:"sat", type:"raster", source:"sat", paint:{"raster-saturation":-0.12,"raster-brightness-min":0.0,"raster-brightness-max":0.78,"raster-contrast":0.16}},
           {id:"topo", type:"raster", source:"topo", layout:{visibility:"none"}}
         ]
       },
