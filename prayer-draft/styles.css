@@ -893,6 +893,14 @@ button {
 .fab:hover { background: #F9EADC; }
 .fab:active { transform: translateY(1px); }
 
+/* 휴대폰: 떠 있는 작성 버튼은 왼쪽 아래에 둔다 (오른쪽 아래 배지·여백과 겹치지 않게) */
+@media (max-width: 759px) {
+  .fab {
+    left: max(18px, env(safe-area-inset-left, 0px));
+    right: auto;
+  }
+}
+
 .site-footer {
   max-width: var(--maxw);
   margin: 0 auto;
