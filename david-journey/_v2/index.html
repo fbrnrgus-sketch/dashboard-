@@ -73,8 +73,10 @@
     position:absolute;left:0;top:0;width:0;height:0;
     pointer-events:auto;cursor:pointer;
     --h:60px;--c:#e3bb74;--c2:#ffe6b8;
-    will-change:transform;
+    will-change:transform;z-index:2;
   }
+  .pin.done{z-index:3}
+  .pin.cur{z-index:7}
   .pin .stem{
     position:absolute;left:-3.5px;bottom:0;width:7px;height:var(--h);
     border-radius:3.5px 3.5px 1px 1px;
@@ -490,6 +492,7 @@
     .phead{padding:8px 12px 7px}
   }
   @media (max-width:430px){
+    #datum .dlab{display:none}
     h1{font-size:13px}
     .psub{font-size:9px}
     #periodBadge{font-size:9px;padding:2px 6px}
@@ -1466,7 +1469,7 @@
         const o = placed[k];
         if(box.x < o.x+o.w+4 && box.x+box.w+4 > o.x && box.y < o.y+o.h+3 && box.y+box.h+3 > o.y){ hit = true; break; }
       }
-      const tooSmall = map.getZoom() < 7.6 && i !== cur;
+      const tooSmall = i !== cur && map.getZoom() < (isMobile() ? 9.2 : 7.6);
       lb.tag.style.visibility = (hit || tooSmall) ? "hidden" : "visible";
       if(!hit && !tooSmall) placed.push(box);
     });
@@ -1478,7 +1481,7 @@
       return a-b;
     });
     const placedLegs = [];
-    const showLegs = map.getZoom() >= 7.3;
+    const showLegs = map.getZoom() >= (isMobile() ? 8.7 : 7.3);
     legOrder.forEach(function(i){
       const e = legEls[i];
       if(!e) return;
@@ -1842,7 +1845,16 @@
   map.on("pitch", onMove);
   map.on("rotate", onMove);
   map.on("terrain", onMove);
-  map.on("idle", function(){ updateScene(); });
+  map.on("idle", function(){ measureTags(); updateScene(); });
+
+  function measureTags(){
+    for(let i=0;i<pinEls.length;i++){
+      const t = lbCache[i] && lbCache[i].tag;
+      if(!t) continue;
+      const w = t.offsetWidth, h = t.offsetHeight;
+      if(w && h){ lbCache[i].w = w; lbCache[i].h = h; }
+    }
+  }
   map.on("render", function(){ if(map.isMoving()) onMove(); });
 
   map.on("error", function(ev){
