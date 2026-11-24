@@ -147,7 +147,7 @@
   }
   .pin.lbl .lbl{opacity:1}
   .pin.dim{opacity:.34}
-  .pin.dim .dot{transform:scale(.8)}
+  .pin.dim .dot{transform:scale(.8);font-size:0;width:15px;height:15px;left:-7.5px;top:-7.5px}
   .pin.cur{z-index:5}
   .pin.cur .dot{
     background:var(--pc);color:#07121a;transform:scale(1.24);
@@ -365,12 +365,13 @@
   }
   @media (max-width:900px){
     :root{--pad:14px}
-    #app{grid-template-columns:100%;grid-template-rows:43vh minmax(0,1fr)}
+    #app{grid-template-columns:100%;grid-template-rows:38vh minmax(0,1fr)}
     #panel{border-left:0;border-top:1px solid var(--line);box-shadow:0 -14px 34px rgba(0,0,0,.45)}
     #legend{display:none}
     #hud{left:10px;top:10px;gap:6px}
     .hbtn{padding:7px 9px;font-size:11px}
-    #phead{padding:12px var(--pad) 10px}
+    #phead{padding:11px var(--pad) 9px}
+    #prog{margin-top:8px}
     .htop h1{font-size:18px}
     .hsub{font-size:10.5px}
     #tabs{margin-top:9px}
@@ -390,6 +391,9 @@
     .pin.cur .lbl{font-size:11.5px}
     .maplab.sea{font-size:9px;letter-spacing:.24em}
     .maplab.reg{font-size:9px;letter-spacing:.16em}
+  }
+  @media (max-width:620px){
+    body:not(.z5) .pin:not(.cur) .lbl{display:none}
   }
   @media (max-width:420px){
     .htop h1{font-size:17px}
