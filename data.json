@@ -1174,5 +1174,113 @@
   }
  ],
  "waiting": [],
- "privacy_note": "공개 페이지입니다. 전화번호·주소·계정·금액 등 민감 정보는 넣지 않고, 요청과 실행 결과만 요약해 표시합니다."
+ "privacy_note": "공개 페이지입니다. 전화번호·주소·계정·금액 등 민감 정보는 넣지 않고, 요청과 실행 결과만 요약해 표시합니다.",
+ "library": [
+  {
+   "id": "jesus-journey",
+   "title": "예수님 생애 여정 3D 지도",
+   "category": "성경 지도",
+   "icon": "🗺️",
+   "description": "탄생부터 승천까지 26개 지점을 3D 지도에 고도와 함께 담았습니다. 누적 약 2,243km를 자동 재생으로 따라갈 수 있습니다.",
+   "tags": [
+    "3D 지도",
+    "신약",
+    "자동 재생"
+   ],
+   "url": "./jesus-journey/",
+   "access": "public",
+   "created_at": "2026-11-22"
+  },
+  {
+   "id": "david-journey",
+   "title": "다윗 도피 여정 3D 지도",
+   "category": "성경 지도",
+   "icon": "🗺️",
+   "description": "도피부터 회복까지 18개 지점·약 618km를 4단계로 나눠 담았습니다. 사건과 성경 구절, 시편 기도, 지명별 영상 링크가 붙어 있습니다.",
+   "tags": [
+    "3D 지도",
+    "구약",
+    "시편"
+   ],
+   "url": "./david-journey/",
+   "access": "public",
+   "created_at": "2026-11-22"
+  },
+  {
+   "id": "paul-journey",
+   "title": "사도 바울 전도여행 지도",
+   "category": "성경 지도",
+   "icon": "🗺️",
+   "description": "1~3차 여정과 로마 압송까지 4개 여정·57개 지점입니다. 사도행전 사건 147건, 서신서 구절 80개와 지명별 영상 76편을 연결했습니다.",
+   "tags": [
+    "지도",
+    "신약",
+    "사도행전"
+   ],
+   "url": "./paul-journey/",
+   "access": "public",
+   "created_at": "2026-11-25"
+  },
+  {
+   "id": "dusoonmoa",
+   "title": "두 손 모아 — 중보기도 나눔",
+   "category": "웹사이트",
+   "icon": "🙏",
+   "description": "기도 제목과 나눔을 익명 또는 이름으로 올리고 함께 기도할 수 있는 공개 사이트입니다. 음성으로 기도 제목을 쓰고 한국어·영어를 바꿔 쓸 수 있습니다.",
+   "tags": [
+    "웹사이트",
+    "기도",
+    "한/영"
+   ],
+   "url": "https://dusoonmoa.pages.dev/",
+   "access": "public",
+   "created_at": "2026-11-24"
+  },
+  {
+   "id": "pdf-to-image",
+   "title": "PDF → 이미지 변환기",
+   "category": "웹앱·도구",
+   "icon": "🧰",
+   "description": "PDF를 페이지별 PNG·JPG로 바꿔 저장하는 단일 HTML 도구입니다. 1~3배 해상도를 고르고 ZIP으로 한 번에 받을 수 있습니다.",
+   "tags": [
+    "PDF",
+    "이미지 변환",
+    "단일 HTML"
+   ],
+   "url": "https://drive.google.com/file/d/1WMzQeV2B-s7_r_2vynJK-xXegqPYY0Cd/view",
+   "access": "private",
+   "created_at": "2026-11-21"
+  },
+  {
+   "id": "youtube-downloader-html",
+   "title": "유튜브 다운로더 (단일 HTML)",
+   "category": "웹앱·도구",
+   "icon": "🧰",
+   "description": "설치 없이 브라우저에서 유튜브 영상을 MP4·MP3로 받는 단일 HTML 도구입니다.",
+   "tags": [
+    "유튜브",
+    "다운로더",
+    "단일 HTML"
+   ],
+   "url": "https://drive.google.com/file/d/16DG7QHVCSuUCAvplHsBh-nopi_HXQ9H-/view",
+   "access": "private",
+   "created_at": "2026-11-21"
+  },
+  {
+   "id": "youtube-downloader-server",
+   "title": "유튜브 다운로더 (서버판)",
+   "category": "웹앱·도구",
+   "icon": "🧰",
+   "description": "FastAPI·yt-dlp·ffmpeg로 돌리는 서버용 패키지(v1.0.1)입니다. 내 PC나 서버에서 실행해 대용량·고화질을 받을 때 씁니다.",
+   "tags": [
+    "유튜브",
+    "서버",
+    "ZIP"
+   ],
+   "url": "https://drive.google.com/file/d/1Y4PfWI_3E-oVAvM2z5echmQ7H86K3_Z8/view",
+   "access": "private",
+   "created_at": "2026-11-21"
+  }
+ ],
+ "library_note": "웹 자료는 카드를 누르면 새 탭에서 바로 열립니다. 🔒 표시된 항목은 구글 드라이브에 있는 개인 파일이라 본인 계정으로 로그인했을 때만 열립니다. 개인 사진·영상처럼 공개하지 않을 자료는 이 목록에 올리지 않습니다."
 }

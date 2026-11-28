@@ -3,12 +3,30 @@
 나이스(피클)가 부탁받은 일의 실행 완료 상태를 날짜별로 보여주는 정적 웹 대시보드입니다.
 
 ## 구성
-- `index.html` — 모바일 우선 UI (날짜 탭 · 요약 카드 · 3개 섹션)
-- `data.json` — 표시할 데이터 (일자별 요청/실행 내역, 정기 자동화, 사용자 확인 대기)
+- `index.html` — 모바일 우선 UI. 상단 탭으로 `📅 일일 실행 내역` / `📦 만든 자료함` 전환
+- `data.json` — 표시할 데이터 (일자별 요청/실행 내역, 정기 자동화, 만든 자료함 목록)
 
 ## 갱신 방법
-`data.json`의 `days`, `automations`, `waiting`만 수정하고 `generated_at`을 바꾼 뒤 커밋하면 됩니다.
+`data.json`의 `days`, `automations`, `library`만 수정하고 `generated_at`을 바꾼 뒤 커밋하면 됩니다.
 `index.html`은 `data.json`을 읽어 화면을 그리므로 별도 빌드가 필요 없습니다.
+
+### `library` 항목 형식
+```text
+{
+  "id": "jesus-journey",
+  "title": "예수님 생애 여정 3D 지도",
+  "category": "성경 지도",
+  "icon": "🗺️",
+  "description": "한두 줄 소개",
+  "tags": ["3D 지도", "신약"],
+  "url": "./jesus-journey/",
+  "access": "public",
+  "created_at": "2026-11-22"
+}
+```
+- `category`는 `성경 지도` / `웹사이트` / `웹앱·도구` 를 쓰고, 새 분류가 생기면 그대로 추가하면 필터 칩이 자동으로 늘어납니다.
+- `access`는 `public`(누구나 열림) 또는 `private`(비공개 드라이브 파일, 본인 로그인 시 열림).
+- 새 자료는 배열 어느 위치에 넣어도 화면에서 `created_at` 최신순으로 정렬됩니다.
 
 ## 표시 원칙
 공개 페이지이므로 전화번호·주소·계정·금액 등 민감 정보는 넣지 않고, 요청과 실행 결과만 요약해 표시합니다.
