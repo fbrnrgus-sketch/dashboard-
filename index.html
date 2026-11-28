@@ -377,12 +377,9 @@ function renderLibrary(){
     el.className = "card";
     if (it.url){
       el.href = it.url;
-      // 같은 사이트 안의 자료(지도·페이지)는 같은 탭에서 열어 팝업 차단에 걸리지 않게 하고,
-      // 다른 사이트(웹사이트·드라이브)는 새 탭에서 연다.
-      if (/^https?:/i.test(String(it.url)) && it.url.indexOf(location.host) < 0){
-        el.target = "_blank";
-        el.rel = "noopener noreferrer";
-      }
+      // 카드는 새 탭에서 연다 — 대시보드(자료함)를 보던 자리를 그대로 둔다.
+      el.target = "_blank";
+      el.rel = "noopener noreferrer";
     }
     const tags = (it.tags || []).map(t=>`<span class="tg">${esc(t)}</span>`).join("");
     const access = ACCESS_LABEL[it.access] || "";
